@@ -97,6 +97,23 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/release.jks" || true
 
+      # Membuktikan APK benar-benar tertanda tangan, bukan sekadar "build sukses".
+      - name: Verify release APK signature
+        if: always()
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then echo "No release APK found"; exit 0; fi
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          echo "### Release signature" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if "$BT/apksigner" verify --print-certs "$APK" 2>&1 | tee /tmp/sig.txt; then
+            echo "SIGNED" >> "$GITHUB_STEP_SUMMARY"
+            grep -E 'Verified using|certificate DN' /tmp/sig.txt >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            echo "UNSIGNED - keystore secrets not configured" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Report APK sizes
         if: always()
         run: |
