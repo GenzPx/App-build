@@ -81,15 +81,25 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "keystore bytes: $(stat -c%s "$RUNNER_TEMP/release.jks")"
           echo "MC_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # Secrets pasted through the web UI often pick up a trailing newline or
+      # stray whitespace, which makes the keystore password silently wrong.
+      # Trim them here so a copy-paste artefact cannot break signing.
       - name: Build release APK
         env:
-          MC_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          MC_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          MC_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace
+          RAW_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          RAW_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          RAW_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          export MC_KEYSTORE_PASSWORD="$(printf '%s' "$RAW_STORE_PASSWORD" | tr -d '[:space:]')"
+          export MC_KEY_ALIAS="$(printf '%s' "$RAW_KEY_ALIAS" | tr -d '[:space:]')"
+          export MC_KEY_PASSWORD="$(printf '%s' "$RAW_KEY_PASSWORD" | tr -d '[:space:]')"
+          echo "store password length: ${#MC_KEYSTORE_PASSWORD}"
+          echo "key alias: $MC_KEY_ALIAS"
+          ./gradlew assembleRelease --stacktrace
         continue-on-error: true
 
       # Remove the decoded keystore even if the build failed.
