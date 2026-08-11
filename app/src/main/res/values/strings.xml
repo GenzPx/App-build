@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Monitored Check</string>
+    <string name="monitoring_channel_name">System monitoring</string>
+    <string name="monitoring_channel_desc">Ongoing notification showing live system metrics</string>
+    <string name="monitoring_notification_title">Monitored Check</string>
+</resources>
