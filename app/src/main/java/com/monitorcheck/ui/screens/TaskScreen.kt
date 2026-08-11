@@ -64,12 +64,23 @@ fun TaskScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     var sort by remember { mutableStateOf(ProcSort.IMPORTANCE) }
     var selected by remember { mutableStateOf<ProcessEntry?>(null) }
 
-    // Refresh whenever the shared engine produces a new sample.
-    LaunchedEffect(sample?.timestamp, tab) {
+    // Enumerating /proc and querying UsageStats is expensive, so the task list
+    // refreshes on its own slow timer instead of on every monitoring tick.
+    var refreshTick by remember { mutableStateOf(0) }
+    LaunchedEffect(tab, refreshTick) {
         when (tab) {
             TaskTab.PROCESSES -> processes = repo.runningProcesses()
             TaskTab.SERVICES -> services = repo.runningServices()
             TaskTab.ACTIVITY -> activity = repo.recentAppActivity()
+        }
+        // Auto-refresh every 5 seconds while this screen is visible.
+        while (true) {
+            kotlinx.coroutines.delay(5_000L)
+            when (tab) {
+                TaskTab.PROCESSES -> processes = repo.runningProcesses()
+                TaskTab.SERVICES -> services = repo.runningServices()
+                TaskTab.ACTIVITY -> activity = repo.recentAppActivity()
+            }
         }
     }
 

@@ -32,6 +32,7 @@ import com.monitorcheck.ui.MonitorViewModel
 import com.monitorcheck.ui.components.MetricValue
 import com.monitorcheck.ui.components.NoticeCard
 import com.monitorcheck.ui.components.Sparkline
+import com.monitorcheck.ui.components.observeSeries
 import com.monitorcheck.ui.components.StatusChip
 import com.monitorcheck.ui.components.UsageBar
 import com.monitorcheck.ui.components.loadColor
@@ -54,7 +55,6 @@ fun DashboardScreen(
     val settings by vm.settings.collectAsStateWithLifecycle()
     val running by vm.running.collectAsStateWithLifecycle()
     val paused by vm.paused.collectAsStateWithLifecycle()
-    val version by vm.seriesVersion.collectAsStateWithLifecycle()
 
     val widgets = settings.dashboardWidgets.mapNotNull { DashboardWidget.fromId(it) }
 
@@ -83,15 +83,15 @@ fun DashboardScreen(
 
         items(widgets, key = { it.id }) { widget ->
             when (widget) {
-                DashboardWidget.CPU_USAGE -> CpuUsageCard(vm, sample, version) { onNavigate("cpu") }
-                DashboardWidget.CPU_FREQ -> CpuFreqCard(vm, sample, version) { onNavigate("cpu") }
+                DashboardWidget.CPU_USAGE -> CpuUsageCard(vm, sample) { onNavigate("cpu") }
+                DashboardWidget.CPU_FREQ -> CpuFreqCard(vm, sample) { onNavigate("cpu") }
                 DashboardWidget.GPU -> GpuCard(sample) { onNavigate("gpu") }
-                DashboardWidget.RAM -> RamCard(vm, sample, version) { onNavigate("memory") }
+                DashboardWidget.RAM -> RamCard(vm, sample) { onNavigate("memory") }
                 DashboardWidget.STORAGE -> StorageCard(vm) { onNavigate("storage") }
-                DashboardWidget.BATTERY -> BatteryCard(vm, sample, version) { onNavigate("battery") }
-                DashboardWidget.BATTERY_TEMP -> BatteryTempCard(vm, sample, version) { onNavigate("battery") }
-                DashboardWidget.DEVICE_TEMP -> DeviceTempCard(vm, sample, version) { onNavigate("thermal") }
-                DashboardWidget.NETWORK -> NetworkCard(vm, sample, version) { onNavigate("network") }
+                DashboardWidget.BATTERY -> BatteryCard(vm, sample) { onNavigate("battery") }
+                DashboardWidget.BATTERY_TEMP -> BatteryTempCard(vm, sample) { onNavigate("battery") }
+                DashboardWidget.DEVICE_TEMP -> DeviceTempCard(vm, sample) { onNavigate("thermal") }
+                DashboardWidget.NETWORK -> NetworkCard(vm, sample) { onNavigate("network") }
                 DashboardWidget.FPS -> FpsCard { onNavigate("fps") }
                 DashboardWidget.PROCESSES -> ProcessesCard(vm) { onNavigate("tasks") }
             }
@@ -145,7 +145,6 @@ private typealias ColumnContent = @Composable () -> Unit
 private fun CpuUsageCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("CPU usage", onClick) {
@@ -156,10 +155,8 @@ private fun CpuUsageCard(
             Spacer(Modifier.height(6.dp))
             UsageBar(fraction = (pct / 100.0).toFloat(), color = loadColor(pct))
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.CPU),
+                values = observeSeries(vm, Series.CPU),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 color = loadColor(pct),
                 minValue = 0f,
@@ -192,7 +189,6 @@ private fun CpuUsageCard(
 private fun CpuFreqCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("CPU frequency", onClick) {
@@ -208,10 +204,8 @@ private fun CpuFreqCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.CPU_FREQ),
+                values = observeSeries(vm, Series.CPU_FREQ),
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 color = StatusColors.accent
             )
@@ -260,7 +254,6 @@ private fun GpuCard(sample: com.monitorcheck.monitor.MonitorSample?, onClick: ()
 private fun RamCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("Memory", onClick) {
@@ -286,10 +279,8 @@ private fun RamCard(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.RAM),
+                values = observeSeries(vm, Series.RAM),
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 color = loadColor(m.usedPercent),
                 minValue = 0f, maxValue = 100f
@@ -303,7 +294,10 @@ private fun RamCard(
 @Composable
 private fun StorageCard(vm: MonitorViewModel, onClick: () -> Unit) {
     val repo = rememberStorageRepo(vm)
-    val totals = repo.primaryTotals()
+    // StatFs is a blocking syscall: load it asynchronously and refresh slowly.
+    val totalsState = com.monitorcheck.core.rememberPolled(15_000L) { repo.primaryTotals() }
+    val totals = totalsState.value.valueOrNull
+        ?: com.monitorcheck.core.Reading.unavailable<Pair<Long, Long>>("Loading")
     DashCard("Storage", onClick) {
         if (totals.isAvailable) {
             val (total, free) = totals.value!!
@@ -328,7 +322,6 @@ private fun StorageCard(vm: MonitorViewModel, onClick: () -> Unit) {
 private fun BatteryCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("Battery", onClick) {
@@ -358,10 +351,8 @@ private fun BatteryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.BATTERY_LEVEL),
+                values = observeSeries(vm, Series.BATTERY_LEVEL),
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 color = color, minValue = 0f, maxValue = 100f
             )
@@ -375,7 +366,6 @@ private fun BatteryCard(
 private fun BatteryTempCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("Battery temperature", onClick) {
@@ -389,10 +379,8 @@ private fun BatteryTempCard(
             }
             MetricValue(Fmt.temperature(c), color = color)
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.BATTERY_TEMP),
+                values = observeSeries(vm, Series.BATTERY_TEMP),
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 color = color
             )
@@ -410,7 +398,6 @@ private fun BatteryTempCard(
 private fun DeviceTempCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("Device temperature", onClick) {
@@ -424,10 +411,8 @@ private fun DeviceTempCard(
             }
             MetricValue(Fmt.temperature(c), unit = "hottest zone", color = color)
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.DEVICE_TEMP),
+                values = observeSeries(vm, Series.DEVICE_TEMP),
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 color = color
             )
@@ -445,7 +430,6 @@ private fun DeviceTempCard(
 private fun NetworkCard(
     vm: MonitorViewModel,
     sample: com.monitorcheck.monitor.MonitorSample?,
-    version: Int,
     onClick: () -> Unit
 ) {
     DashCard("Network", onClick) {
@@ -470,10 +454,8 @@ private fun NetworkCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
-            val ignoredVersion = version
             Sparkline(
-                values = vm.series.snapshot(Series.NET_DOWN),
+                values = observeSeries(vm, Series.NET_DOWN),
                 modifier = Modifier.fillMaxWidth().height(44.dp),
                 color = StatusColors.accent
             )

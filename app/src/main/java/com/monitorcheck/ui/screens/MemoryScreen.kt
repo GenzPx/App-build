@@ -18,12 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.Fmt
+import com.monitorcheck.core.rememberPolled
 import com.monitorcheck.monitor.Series
 import com.monitorcheck.ui.MonitorViewModel
 import com.monitorcheck.ui.components.MetricValue
 import com.monitorcheck.ui.components.MonoRow
 import com.monitorcheck.ui.components.SectionCard
 import com.monitorcheck.ui.components.Sparkline
+import com.monitorcheck.ui.components.observeSeries
 import com.monitorcheck.ui.components.StatusChip
 import com.monitorcheck.ui.components.UsageBar
 import com.monitorcheck.ui.components.loadColor
@@ -32,9 +34,10 @@ import com.monitorcheck.ui.theme.StatusColors
 @Composable
 fun MemoryScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
-    val version by vm.seriesVersion.collectAsStateWithLifecycle()
     // Recomputed each time a new sample arrives so kernel counters stay current.
-    val sections = remember(sample?.timestamp) { vm.memoryRepo.infoSections() }
+    // /proc/meminfo parsing is IO; keep it off the composition thread.
+    val sectionsState = rememberPolled(4_000L) { vm.memoryRepo.infoSections() }
+    val sections = sectionsState.value.valueOrNull.orEmpty()
 
     LazyColumn(contentPadding = contentPadding) {
         item {
@@ -68,9 +71,8 @@ fun MemoryScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                                 color = StatusColors.critical)
                         }
                         Spacer(Modifier.height(10.dp))
-                        val v = version
                         Sparkline(
-                            values = vm.series.snapshot(Series.RAM),
+                            values = observeSeries(vm, Series.RAM),
                             modifier = Modifier.fillMaxWidth().height(80.dp),
                             color = loadColor(m.usedPercent), minValue = 0f, maxValue = 100f
                         )

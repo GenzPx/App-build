@@ -47,7 +47,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.monitorcheck.ui.screens.AboutScreen
 import com.monitorcheck.ui.screens.AppsScreen
+import com.monitorcheck.ui.screens.BenchmarkScreen
 import com.monitorcheck.ui.screens.BatteryScreen
 import com.monitorcheck.ui.screens.BinderScreen
 import com.monitorcheck.ui.screens.CpuScreen
@@ -110,7 +112,9 @@ private val ROUTE_TITLES = mapOf(
     "scanner" to "Pattern Scanner",
     "logs" to "Logs & crashes",
     "report" to "Export report",
-    "settings" to "Settings"
+    "settings" to "Settings",
+    "benchmark" to "Benchmark",
+    "about" to "About"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -217,6 +221,8 @@ fun MonitoredCheckApp(vm: MonitorViewModel) {
             composable("logs") { LogScreen(padding) }
             composable("report") { ReportScreen(padding) }
             composable("settings") { SettingsScreen(vm, padding) }
+            composable("benchmark") { BenchmarkScreen(padding) }
+            composable("about") { AboutScreen(padding) }
         }
     }
 }
@@ -232,7 +238,8 @@ private val MONITOR_ITEMS = listOf(
     MenuItem("sensors", "Sensors", "Full sensor inventory with live values"),
     MenuItem("storage", "Storage", "Volumes, analyzer, browser and duplicate finder"),
     MenuItem("fps", "Display & FPS", "Frame rate measurement and display capabilities"),
-    MenuItem("tasks", "Task manager", "Processes, services and app activity")
+    MenuItem("tasks", "Task manager", "Processes, services and app activity"),
+    MenuItem("benchmark", "Benchmark", "Measured CPU, memory, hashing and storage throughput")
 )
 
 private val MORE_ITEMS = listOf(
@@ -246,7 +253,8 @@ private val MORE_ITEMS = listOf(
     MenuItem("scanner", "Pattern Scanner", "Local heuristic inspection of apps and files"),
     MenuItem("logs", "Logs & crashes", "Logcat viewer and local crash reports"),
     MenuItem("report", "Export report", "Generate a full TXT diagnostic report"),
-    MenuItem("settings", "Settings", "Intervals, theme, widgets, background monitoring")
+    MenuItem("settings", "Settings", "Intervals, theme, widgets, background monitoring"),
+    MenuItem("about", "About & support", "Creator, donations, licence, privacy policy")
 )
 
 @Composable

@@ -30,6 +30,16 @@ Each of these states appears in the UI as a coloured chip alongside a plain-lang
 
 ---
 
+## Performance
+
+The monitoring engine was rebuilt around three rules that keep the UI at a steady frame rate even on low-end hardware:
+
+1. **No blocking I/O in composition.** Every repository touches procfs, sysfs, PackageManager or SQLite. All of it now loads through `rememberAsync` / `rememberPolled`, which run on `Dispatchers.IO` and show a loading state instead of freezing the main thread.
+2. **Per-series graph flows.** Each chart observes its own `StateFlow`, so it recomposes only when its own data changes. Previously a single global counter invalidated every card on screen at once — the main source of dashboard jank.
+3. **Tiered polling.** Expensive sysfs sources (thermal zones, GPU nodes) refresh every 3rd tick (5th in Low Resource Mode) and reuse the last *real* reading in between — never an interpolated one. The task list runs on its own 5-second timer instead of re-enumerating `/proc` on every sample.
+
+`MonitorSample` is `@Immutable` so Compose can skip unchanged subtrees.
+
 ## Features
 
 ### Dashboard
@@ -74,6 +84,12 @@ Tools — all strictly user-initiated: ping, TCP latency test with jitter, DNS l
 
 ### Display & FPS
 Resolution, density, DPI, physical screen size, refresh rate, all supported modes, HDR types, wide colour gamut, brightness and display state. FPS is measured with Choreographer vsync callbacks on this app's own render loop — and the UI states exactly that, because Android does not expose other apps' frame rates to a normal app.
+
+### Benchmark
+On-device micro-benchmarks that measure real work and divide it by real elapsed time: dependent integer chains (MOPS), sqrt-heavy floating point (MFLOPS), parallel scaling across every core, large memory copies (MB/s), SHA-256 throughput, and sequential storage write/read with `fsync`. There is no hidden reference table and no synthetic "points" — each result states exactly what was measured, and the UI notes that figures are comparable between runs on the same device rather than against other phones' marketing numbers.
+
+### About & support
+Creator profile, links to the source, donation links, full build metadata, tech stack, the privacy policy, the data-integrity pledge, the MIT licence and the disclaimer.
 
 ### Kernel, SELinux, Binder, Drivers
 Kernel version and build, compiler, command line, uptime, deep sleep, boot time and reason, verified boot state and bootloader lock status. SELinux enforcement state, policy version and this process's security context (read-only — the app never attempts to change it). Binder diagnostics with an honest explanation of the debugfs restriction. Driver/subsystem information for graphics, display, audio, camera, wireless, USB, storage, input and kernel modules.
@@ -256,12 +272,35 @@ Download the APK from the **Artifacts** section of the workflow run.
 
 ### Signing
 
-No keystore or credential is committed to this repository, and the workflow requests only `contents: read`. The release build is therefore unsigned. To produce a signed release in your own fork, add your keystore as GitHub Secrets and a signing step that reads from them — never commit a keystore, and never place a token or key in source, configuration, the README, or the APK.
+The release build is signed when — and only when — the environment supplies credentials. Gradle reads them from environment variables, never from a file in the repository:
+
+| Variable | GitHub Secret | Meaning |
+|---|---|---|
+| `MC_KEYSTORE_PATH` | derived from `KEYSTORE_BASE64` | path to the decoded keystore |
+| `MC_KEYSTORE_PASSWORD` | `KEYSTORE_PASSWORD` | keystore password |
+| `MC_KEY_ALIAS` | `KEY_ALIAS` | key alias |
+| `MC_KEY_PASSWORD` | `KEY_PASSWORD` | key password |
+
+CI decodes the keystore from `KEYSTORE_BASE64` into the runner's temp directory, builds, then deletes it in an `if: always()` step. If the secrets are absent the release APK is simply produced unsigned rather than failing the build.
+
+**The keystore and its passwords are never committed.** `.gitignore` blocks `*.jks`, `*.keystore` and `keystore.properties`. Losing the keystore means you can no longer ship updates to an already-installed app, so back it up somewhere safe and private.
+
+Build a signed release locally:
+
+```bash
+export MC_KEYSTORE_PATH=/absolute/path/to/release.jks
+export MC_KEYSTORE_PASSWORD='...'
+export MC_KEY_ALIAS=monitoredcheck
+export MC_KEY_PASSWORD='...'
+./gradlew assembleRelease
+```
 
 ---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+Created by **Genz** ([@GenzPx](https://github.com/GenzPx)). If the app is useful to you, support is welcome via [Saweria](https://saweria.co/Genzsenpai) or [Trakteer](https://trakteer.id/Genzsenpai) — entirely optional, and no feature is ever paywalled.
 
 Monitored Check is a diagnostic and informational tool. Pattern Scanner is a heuristic inspector, not an antivirus, and it cannot certify any file as safe or malicious. Storage deletion is irreversible and always requires your explicit confirmation.

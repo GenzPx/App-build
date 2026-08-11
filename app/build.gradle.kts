@@ -21,6 +21,39 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    /**
+     * Release signing.
+     *
+     * Credentials are read ONLY from environment variables (populated from GitHub
+     * Secrets in CI, or exported locally). No keystore, password or alias is ever
+     * committed to this repository. If the variables are absent the release build
+     * simply stays unsigned instead of failing.
+     */
+    val keystorePath = System.getenv("MC_KEYSTORE_PATH")
+    val keystorePassword = System.getenv("MC_KEYSTORE_PASSWORD")
+    val keyAliasEnv = System.getenv("MC_KEY_ALIAS")
+    val keyPasswordEnv = System.getenv("MC_KEY_PASSWORD")
+    val hasSigningConfig = !keystorePath.isNullOrBlank() &&
+        !keystorePassword.isNullOrBlank() &&
+        !keyAliasEnv.isNullOrBlank() &&
+        !keyPasswordEnv.isNullOrBlank() &&
+        file(keystorePath).exists()
+
+    signingConfigs {
+        if (hasSigningConfig) {
+            create("release") {
+                storeFile = file(keystorePath!!)
+                storePassword = keystorePassword
+                keyAlias = keyAliasEnv
+                keyPassword = keyPasswordEnv
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = false
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -34,9 +67,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // No signing config is committed. CI produces an unsigned release APK
-            // (or signs it from GitHub Secrets) — never from a key in the repo.
-            signingConfig = null
+            // Signed only when the environment supplies credentials; otherwise the
+            // artifact is produced unsigned rather than failing the build.
+            signingConfig = if (hasSigningConfig) signingConfigs.getByName("release") else null
         }
     }
 

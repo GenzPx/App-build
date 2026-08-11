@@ -21,12 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.Fmt
+import com.monitorcheck.core.rememberPolled
 import com.monitorcheck.hardware.thermal.ThermalCategory
 import com.monitorcheck.monitor.Series
 import com.monitorcheck.ui.MonitorViewModel
 import com.monitorcheck.ui.components.MetricValue
 import com.monitorcheck.ui.components.NoticeCard
 import com.monitorcheck.ui.components.Sparkline
+import com.monitorcheck.ui.components.observeSeries
 import com.monitorcheck.ui.components.StatusChip
 import com.monitorcheck.ui.components.UsageBar
 import com.monitorcheck.ui.theme.MonoNumberStyle
@@ -35,10 +37,15 @@ import com.monitorcheck.ui.theme.StatusColors
 @Composable
 fun ThermalScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
-    val version by vm.seriesVersion.collectAsStateWithLifecycle()
     // Re-read zones on every sample so temperatures stay live.
-    val zones = remember(sample?.timestamp) { vm.thermalRepo.readZones() }
-    val status = remember(sample?.timestamp) { vm.thermalRepo.thermalStatus() }
+// Reading every thermal zone touches dozens of sysfs files. Poll it on a slower
+    // cadence than the dashboard and always on an IO dispatcher.
+    val zonesState = rememberPolled(3_000L) { vm.thermalRepo.readZones() }
+    val statusState = rememberPolled(3_000L) { vm.thermalRepo.thermalStatus() }
+    val zones = zonesState.value.valueOrNull
+        ?: com.monitorcheck.core.Reading.unavailable<List<com.monitorcheck.hardware.thermal.ThermalZone>>("Loading")
+    val status = statusState.value.valueOrNull
+        ?: com.monitorcheck.core.Reading.unavailable<String>("Loading")
 
     LazyColumn(contentPadding = contentPadding) {
         item {
@@ -84,9 +91,8 @@ fun ThermalScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                         val c = hottest.value!!
                         MetricValue(Fmt.temperature(c), color = tempColor(c))
                         Spacer(Modifier.height(8.dp))
-                        val v = version
                         Sparkline(
-                            values = vm.series.snapshot(Series.DEVICE_TEMP),
+                            values = observeSeries(vm, Series.DEVICE_TEMP),
                             modifier = Modifier.fillMaxWidth().height(80.dp),
                             color = tempColor(c)
                         )

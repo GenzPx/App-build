@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.monitorcheck.core.rememberAsync
 import com.monitorcheck.hardware.display.DisplayRepository
 import com.monitorcheck.hardware.display.FpsMonitor
 import com.monitorcheck.monitor.RingBuffer
@@ -52,7 +53,8 @@ fun FpsScreen(contentPadding: PaddingValues) {
     val stats by monitor.stats.collectAsStateWithLifecycle()
     val history = remember { RingBuffer(100) }
     var version by remember { mutableStateOf(0) }
-    val sections = remember { displayRepo.infoSections() }
+    val sectionsState = rememberAsync { displayRepo.infoSections() }
+    val sections = sectionsState.value.valueOrNull.orEmpty()
 
     DisposableEffect(Unit) {
         monitor.start()
@@ -85,7 +87,6 @@ fun FpsScreen(contentPadding: PaddingValues) {
                         }
                         MetricValue(String.format(Locale.US, "%.1f", stats.currentFps), "fps", color)
                         Spacer(Modifier.height(10.dp))
-                        val v = version
                         Sparkline(
                             values = history.toList(),
                             modifier = Modifier.fillMaxWidth().height(80.dp),

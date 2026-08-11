@@ -108,6 +108,12 @@ fun SettingsScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                 ) { vm.setAutoMonitor(it) }
 
                 SwitchRow(
+                    "Haptic feedback",
+                    "Subtle vibration when toggling controls and finishing long operations.",
+                    settings.hapticsEnabled
+                ) { vm.setHaptics(it) }
+
+                SwitchRow(
                     "Record battery history",
                     "Stores one battery sample per minute in a local database so the battery " +
                         "graphs can cover up to 30 days. Never leaves this device.",

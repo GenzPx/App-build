@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
+    env:
+      KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -71,12 +74,28 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      # Release is built unsigned on purpose: no keystore or credential is stored
-      # in this repository. Sign locally, or add a signing step that reads from
-      # GitHub Secrets in your own fork.
-      - name: Build unsigned release APK
+      # Decode the release keystore from a GitHub Secret. The keystore is NEVER
+      # committed; it exists only for the lifetime of this job and is deleted below.
+      - name: Decode release keystore
+        if: ${{ env.KEYSTORE_B64 != '' }}
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "MC_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        env:
+          MC_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MC_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MC_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --stacktrace
         continue-on-error: true
+
+      # Remove the decoded keystore even if the build failed.
+      - name: Remove keystore from runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks" || true
 
       - name: Report APK sizes
         if: always()
@@ -102,7 +121,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-unsigned
+          name: app-release
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
           if-no-files-found: ignore

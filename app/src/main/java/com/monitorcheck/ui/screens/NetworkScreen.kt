@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.Fmt
+import com.monitorcheck.core.rememberPolled
 import com.monitorcheck.monitor.Series
 import com.monitorcheck.network.NetworkTools
 import com.monitorcheck.network.ToolResult
@@ -45,6 +46,7 @@ import com.monitorcheck.ui.components.MonoRow
 import com.monitorcheck.ui.components.NoticeCard
 import com.monitorcheck.ui.components.SectionCard
 import com.monitorcheck.ui.components.Sparkline
+import com.monitorcheck.ui.components.observeSeries
 import com.monitorcheck.ui.theme.MonoNumberStyle
 import com.monitorcheck.ui.theme.StatusColors
 import kotlinx.coroutines.Job
@@ -82,12 +84,13 @@ fun NetworkScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
 @Composable
 private fun NetworkStatusTab(vm: MonitorViewModel, padding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
-    val version by vm.seriesVersion.collectAsStateWithLifecycle()
-    val sections = remember(sample?.timestamp) {
+// WifiManager / TelephonyManager calls are binder IPC: never on the main thread.
+    val sectionsState = rememberPolled(4_000L) {
         val r = vm.networkRepo
         listOf(r.capabilitiesSection(), r.linkPropertiesSection(), r.wifiSection(),
             r.mobileSection(), r.trafficSection())
     }
+    val sections = sectionsState.value.valueOrNull.orEmpty()
 
     LazyColumn(contentPadding = padding) {
         item {
@@ -121,11 +124,10 @@ private fun NetworkStatusTab(vm: MonitorViewModel, padding: PaddingValues) {
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        val v = version
                         Text("Download", style = MaterialTheme.typography.labelSmall,
                             color = StatusColors.muted)
                         Sparkline(
-                            values = vm.series.snapshot(Series.NET_DOWN),
+                            values = observeSeries(vm, Series.NET_DOWN),
                             modifier = Modifier.fillMaxWidth().height(60.dp),
                             color = StatusColors.accent
                         )
@@ -133,7 +135,7 @@ private fun NetworkStatusTab(vm: MonitorViewModel, padding: PaddingValues) {
                         Text("Upload", style = MaterialTheme.typography.labelSmall,
                             color = StatusColors.muted)
                         Sparkline(
-                            values = vm.series.snapshot(Series.NET_UP),
+                            values = observeSeries(vm, Series.NET_UP),
                             modifier = Modifier.fillMaxWidth().height(60.dp),
                             color = StatusColors.ok
                         )
@@ -155,7 +157,9 @@ private fun NetworkStatusTab(vm: MonitorViewModel, padding: PaddingValues) {
 @Composable
 private fun NetworkInterfacesTab(vm: MonitorViewModel, padding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
-    val ifaces = remember(sample?.timestamp) { vm.networkRepo.interfaces() }
+    val ifacesState = rememberPolled(5_000L) { vm.networkRepo.interfaces() }
+    val ifaces = ifacesState.value.valueOrNull
+        ?: com.monitorcheck.core.Reading.unavailable<List<com.monitorcheck.network.InterfaceStats>>("Loading")
 
     LazyColumn(contentPadding = padding) {
         if (!ifaces.isAvailable) {
