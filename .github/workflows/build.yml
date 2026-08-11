@@ -22,9 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
-    env:
-      KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,55 +71,12 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      # Decode the release keystore from a GitHub Secret. The keystore is NEVER
-      # committed; it exists only for the lifetime of this job and is deleted below.
-      - name: Decode release keystore
-        if: ${{ env.KEYSTORE_B64 != '' }}
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/release.jks"
-          echo "keystore bytes: $(stat -c%s "$RUNNER_TEMP/release.jks")"
-          echo "MC_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-
-      # Secrets pasted through the web UI often pick up a trailing newline or
-      # stray whitespace, which makes the keystore password silently wrong.
-      # Trim them here so a copy-paste artefact cannot break signing.
-      - name: Build release APK
-        env:
-          RAW_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          RAW_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          RAW_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          export MC_KEYSTORE_PASSWORD="$(printf '%s' "$RAW_STORE_PASSWORD" | tr -d '[:space:]')"
-          export MC_KEY_ALIAS="$(printf '%s' "$RAW_KEY_ALIAS" | tr -d '[:space:]')"
-          export MC_KEY_PASSWORD="$(printf '%s' "$RAW_KEY_PASSWORD" | tr -d '[:space:]')"
-          echo "store password length: ${#MC_KEYSTORE_PASSWORD}"
-          echo "key alias: $MC_KEY_ALIAS"
-          ./gradlew assembleRelease --stacktrace
+      # Release is built unsigned on purpose: no keystore or credential is stored
+      # in this repository. Sign locally, or add a signing step that reads from
+      # GitHub Secrets in your own fork.
+      - name: Build unsigned release APK
+        run: ./gradlew assembleRelease --stacktrace
         continue-on-error: true
-
-      # Remove the decoded keystore even if the build failed.
-      - name: Remove keystore from runner
-        if: always()
-        run: rm -f "$RUNNER_TEMP/release.jks" || true
-
-      # Membuktikan APK benar-benar tertanda tangan, bukan sekadar "build sukses".
-      - name: Verify release APK signature
-        if: always()
-        run: |
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          if [ -z "$APK" ]; then echo "No release APK found"; exit 0; fi
-          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          echo "### Release signature" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          if "$BT/apksigner" verify --print-certs "$APK" 2>&1 | tee /tmp/sig.txt; then
-            echo "SIGNED" >> "$GITHUB_STEP_SUMMARY"
-            grep -E 'Verified using|certificate DN' /tmp/sig.txt >> "$GITHUB_STEP_SUMMARY" || true
-          else
-            echo "UNSIGNED - keystore secrets not configured" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report APK sizes
         if: always()
@@ -148,7 +102,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: app-release-unsigned
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
           if-no-files-found: ignore

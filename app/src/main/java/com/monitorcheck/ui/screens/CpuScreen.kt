@@ -22,14 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.Fmt
-import com.monitorcheck.core.rememberAsync
-import com.monitorcheck.core.rememberPolled
 import com.monitorcheck.monitor.Series
 import com.monitorcheck.ui.MonitorViewModel
 import com.monitorcheck.ui.components.MetricValue
 import com.monitorcheck.ui.components.SectionCard
 import com.monitorcheck.ui.components.Sparkline
-import com.monitorcheck.ui.components.observeSeries
 import com.monitorcheck.ui.components.StatusChip
 import com.monitorcheck.ui.components.UsageBar
 import com.monitorcheck.ui.components.loadColor
@@ -39,10 +36,9 @@ import com.monitorcheck.ui.theme.StatusColors
 @Composable
 fun CpuScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
+    val version by vm.seriesVersion.collectAsStateWithLifecycle()
     // Static CPU description is read once; it does not change at runtime.
-    // /proc/cpuinfo + every cpufreq node: load once, asynchronously.
-    val staticState = rememberAsync { vm.cpuRepo.staticInfo() }
-    val staticSections = staticState.value.valueOrNull.orEmpty()
+    val staticSections = remember { vm.cpuRepo.staticInfo() }
 
     LazyColumn(contentPadding = contentPadding) {
         item {
@@ -62,8 +58,9 @@ fun CpuScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                         Spacer(Modifier.height(8.dp))
                         UsageBar((pct / 100.0).toFloat(), color = loadColor(pct))
                         Spacer(Modifier.height(10.dp))
+                        val v = version
                         Sparkline(
-                            values = observeSeries(vm, Series.CPU),
+                            values = vm.series.snapshot(Series.CPU),
                             modifier = Modifier.fillMaxWidth().height(90.dp),
                             color = loadColor(pct), minValue = 0f, maxValue = 100f
                         )
@@ -83,9 +80,7 @@ fun CpuScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    val tempState = rememberPolled(3_000L) { vm.cpuRepo.cpuTemperature() }
-                    val temp = tempState.value.valueOrNull
-                        ?: com.monitorcheck.core.Reading.unavailable<Double>("Loading")
+                    val temp = remember(sample?.timestamp) { vm.cpuRepo.cpuTemperature() }
                     Text(
                         "CPU temperature: ${temp.display { Fmt.temperature(it) }}",
                         style = MaterialTheme.typography.bodySmall,
@@ -171,7 +166,8 @@ fun CpuScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                     Text("Frequency history", style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(8.dp))
-                    val freqSeries = observeSeries(vm, Series.CPU_FREQ)
+                    val v = version
+                    val freqSeries = vm.series.snapshot(Series.CPU_FREQ)
                     if (freqSeries.size >= 2) {
                         Sparkline(
                             values = freqSeries,

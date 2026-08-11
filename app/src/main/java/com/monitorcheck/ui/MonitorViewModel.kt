@@ -34,14 +34,11 @@ import kotlinx.coroutines.withContext
  *
  * One coroutine samples every enabled source at the user's interval and publishes an
  * immutable [MonitorSample]. All screens observe this single loop instead of each
- * starting their own timer.
+ * starting their own timer — that keeps CPU and battery cost bounded no matter how
+ * many cards are visible.
  *
- * Performance design:
- *  - sampling always happens on Dispatchers.IO, never on the main thread
- *  - each graph series has its own flow, so a chart only recomposes when its own
- *    data changes (previously one global counter recomposed every card at once)
- *  - expensive sysfs sources (thermal, GPU) are sampled on a slower sub-interval
- *  - polling throttles automatically in the background and in Low Resource Mode
+ * The loop is paused whenever the app leaves the foreground (driven by MainActivity's
+ * lifecycle), and skips expensive sources entirely in Low Resource Mode.
  */
 class MonitorViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -68,22 +65,16 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     private val _paused = MutableStateFlow(false)
     val paused: StateFlow<Boolean> = _paused.asStateFlow()
 
-    /** Per-series graph history with bounded memory. */
+    /** Graph history. Recomposition is driven by [seriesVersion] to avoid copying lists. */
     val series = SeriesStore(capacity = 120)
+    private val _seriesVersion = MutableStateFlow(0)
+    val seriesVersion: StateFlow<Int> = _seriesVersion.asStateFlow()
 
     private var loopJob: Job? = null
     private var inForeground = true
 
-    /**
-     * Thermal and GPU nodes are the slowest reads. They are refreshed every N ticks
-     * rather than every tick, and their last good value is reused in between.
-     */
-    private var tickCounter = 0L
-    private var cachedThermal: Reading<Double> = Reading.unavailable("Collecting first sample")
-    private var cachedGpuUtil: Reading<Double> = Reading.unavailable("Collecting first sample")
-    private var cachedGpuFreq: Reading<Long> = Reading.unavailable("Collecting first sample")
-
     init {
+        // Honour "Auto Monitor on App Launch".
         viewModelScope.launch {
             val s = settingsRepo.settings.first()
             if (s.autoMonitorOnLaunch) start()
@@ -108,18 +99,13 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleRunning() = if (_running.value) stop() else start()
 
     /** Called by MainActivity on lifecycle changes to throttle background sampling. */
-    fun setForeground(foreground: Boolean) { inForeground = foreground }
+    fun setForeground(foreground: Boolean) {
+        inForeground = foreground
+    }
 
-    fun clearSeries() = series.clear()
-
-    /** Forces an immediate resample, used by pull-to-refresh. */
-    fun refreshNow() {
-        viewModelScope.launch(Dispatchers.Default) {
-            val s = settings.value
-            val sample = withContext(Dispatchers.IO) { collect(s, forceSlowSources = true) }
-            _sample.value = sample
-            record(sample)
-        }
+    fun clearSeries() {
+        series.clear()
+        _seriesVersion.value = _seriesVersion.value + 1
     }
 
     private suspend fun loop() {
@@ -131,13 +117,13 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
                 continue
             }
 
+            // Background throttle: never poll faster than 10s when not visible.
             val interval = when {
                 !inForeground -> maxOf(10_000L, s.refreshIntervalMs)
                 s.lowResourceMode -> maxOf(2_000L, s.refreshIntervalMs)
                 else -> s.refreshIntervalMs
             }
 
-            tickCounter++
             val sample = withContext(Dispatchers.IO) { collect(s) }
             _sample.value = sample
             record(sample)
@@ -146,12 +132,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Collects one sample. Must be called on an IO dispatcher.
-     *
-     * @param forceSlowSources re-read thermal/GPU even if it is not their turn
-     */
-    private fun collect(s: AppSettings, forceSlowSources: Boolean = false): MonitorSample {
+    private fun collect(s: AppSettings): MonitorSample {
         val cpu = runCatching { cpuRepo.sampleUsage() }.getOrNull()
         val memory = runCatching { memoryRepo.snapshot() }
             .getOrElse { Reading.error(it.message) }
@@ -159,32 +140,20 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
             .getOrElse { Reading.error(it.message) }
         val throughput = runCatching { networkRepo.sampleThroughput() }.getOrNull()
 
-        // Refresh the expensive sysfs sources every 3rd tick (or every 5th when the
-        // user asked for Low Resource Mode). Values in between are the last real
-        // reading, never an interpolation.
-        val slowEvery = if (s.lowResourceMode) 5 else 3
-        if (forceSlowSources || tickCounter % slowEvery == 1L || tickCounter <= 1) {
-            cachedThermal = if (s.lowResourceMode && !forceSlowSources) {
-                Reading.unavailable("Skipped in Low Resource Mode")
-            } else {
-                runCatching { thermalRepo.hottestZone().map { it.celsius } }
-                    .getOrElse { Reading.error(it.message) }
-            }
-            cachedGpuUtil = if (s.lowResourceMode && !forceSlowSources) {
-                Reading.unavailable("Skipped in Low Resource Mode")
-            } else {
-                runCatching { gpuRepo.gpuUtilisation() }.getOrElse { Reading.error(it.message) }
-            }
-            cachedGpuFreq = if (s.lowResourceMode && !forceSlowSources) {
-                Reading.unavailable("Skipped in Low Resource Mode")
-            } else {
-                runCatching { gpuRepo.gpuFrequency() }.getOrElse { Reading.error(it.message) }
-            }
-        }
+        // Thermal and GPU sysfs reads are the most expensive; skip in low resource mode.
+        val hottest = if (s.lowResourceMode) Reading.unavailable<Double>("Skipped in Low Resource Mode")
+        else runCatching { thermalRepo.hottestZone().map { it.celsius } }
+            .getOrElse { Reading.error(it.message) }
 
         val batteryTemp = battery.value?.temperatureCelsius
             ?.let { Reading.available(it, "BatteryManager") }
             ?: Reading.unavailable("Not reported by this device")
+
+        val gpuUtil = if (s.lowResourceMode) Reading.unavailable<Double>("Skipped in Low Resource Mode")
+        else runCatching { gpuRepo.gpuUtilisation() }.getOrElse { Reading.error(it.message) }
+
+        val gpuFreq = if (s.lowResourceMode) Reading.unavailable<Long>("Skipped in Low Resource Mode")
+        else runCatching { gpuRepo.gpuFrequency() }.getOrElse { Reading.error(it.message) }
 
         return MonitorSample(
             timestamp = System.currentTimeMillis(),
@@ -192,42 +161,49 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
             memory = memory,
             battery = battery,
             throughput = throughput,
-            hottestCelsius = cachedThermal,
+            hottestCelsius = hottest,
             batteryCelsius = batteryTemp,
-            gpuUtilPercent = cachedGpuUtil,
-            gpuFreqKHz = cachedGpuFreq
+            gpuUtilPercent = gpuUtil,
+            gpuFreqKHz = gpuFreq
         )
     }
 
     /** Appends real values to the graph series. Missing values are simply not appended. */
     private fun record(sample: MonitorSample) {
-        sample.cpu?.totalPercent?.value?.let { series.add(Series.CPU, it.toFloat()) }
+        var changed = false
+
+        sample.cpu?.totalPercent?.value?.let { series.add(Series.CPU, it.toFloat()); changed = true }
         sample.cpu?.cores?.mapNotNull { it.currentKHz }?.maxOrNull()?.let {
-            series.add(Series.CPU_FREQ, (it / 1000).toFloat())
+            series.add(Series.CPU_FREQ, (it / 1000).toFloat()); changed = true
         }
-        sample.memory.value?.let { series.add(Series.RAM, it.usedPercent.toFloat()) }
+        sample.memory.value?.let { series.add(Series.RAM, it.usedPercent.toFloat()); changed = true }
         sample.battery.value?.let {
             series.add(Series.BATTERY_LEVEL, it.levelPercent.toFloat())
             it.currentNowUa?.let { c -> series.add(Series.BATTERY_CURRENT, c / 1000f) }
+            changed = true
         }
-        sample.batteryCelsius.value?.let { series.add(Series.BATTERY_TEMP, it.toFloat()) }
-        sample.hottestCelsius.value?.let { series.add(Series.DEVICE_TEMP, it.toFloat()) }
+        sample.batteryCelsius.value?.let { series.add(Series.BATTERY_TEMP, it.toFloat()); changed = true }
+        sample.hottestCelsius.value?.let { series.add(Series.DEVICE_TEMP, it.toFloat()); changed = true }
         sample.throughput?.let {
             if (it.elapsedMs > 0) {
                 series.add(Series.NET_DOWN, it.rxRateBps.toFloat())
                 series.add(Series.NET_UP, it.txRateBps.toFloat())
+                changed = true
             }
         }
-        sample.gpuUtilPercent.value?.let { series.add(Series.GPU, it.toFloat()) }
+        sample.gpuUtilPercent.value?.let { series.add(Series.GPU, it.toFloat()); changed = true }
 
+        if (changed) _seriesVersion.value = _seriesVersion.value + 1
+
+        // Persist battery history (rate-limited internally to one write per minute).
         sample.battery.value?.let { snap ->
             if (settings.value.batteryHistoryEnabled) {
-                viewModelScope.launch(Dispatchers.IO) { runCatching { historyStore.record(snap) } }
+                viewModelScope.launch { runCatching { historyStore.record(snap) } }
             }
         }
     }
 
-    // ---- Settings mutators ----
+    // ---- Settings mutators, exposed so screens do not need their own scope ----
 
     fun setRefreshInterval(ms: Long) = viewModelScope.launch { settingsRepo.setRefreshInterval(ms) }
     fun setTheme(mode: com.monitorcheck.core.ThemeMode) =
@@ -245,7 +221,6 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     fun setNotifyNetwork(v: Boolean) = viewModelScope.launch { settingsRepo.setNotifyNetwork(v) }
     fun setNotifyTemperature(v: Boolean) = viewModelScope.launch { settingsRepo.setNotifyTemperature(v) }
     fun setBatteryHistory(v: Boolean) = viewModelScope.launch { settingsRepo.setBatteryHistory(v) }
-    fun setHaptics(v: Boolean) = viewModelScope.launch { settingsRepo.setHaptics(v) }
     fun toggleWidget(id: String, enabled: Boolean) =
         viewModelScope.launch { settingsRepo.toggleWidget(id, enabled) }
     fun moveWidget(id: String, up: Boolean) = viewModelScope.launch { settingsRepo.moveWidget(id, up) }

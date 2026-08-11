@@ -33,7 +33,6 @@ data class AppSettings(
     val notifyNetwork: Boolean = true,
     val notifyTemperature: Boolean = false,
     val batteryHistoryEnabled: Boolean = true,
-    val hapticsEnabled: Boolean = true,
     val dashboardWidgets: List<String> = DashboardWidget.defaultOrder(),
     val graphPointCount: Int = 60
 )
@@ -78,7 +77,6 @@ class SettingsRepository(private val context: Context) {
         val N_NET = booleanPreferencesKey("notify_network")
         val N_TEMP = booleanPreferencesKey("notify_temp")
         val BAT_HISTORY = booleanPreferencesKey("battery_history")
-        val HAPTICS = booleanPreferencesKey("haptics")
         val WIDGETS = stringPreferencesKey("dashboard_widgets")
         val GRAPH_POINTS = intPreferencesKey("graph_points")
     }
@@ -100,7 +98,6 @@ class SettingsRepository(private val context: Context) {
             notifyNetwork = p[Keys.N_NET] ?: true,
             notifyTemperature = p[Keys.N_TEMP] ?: false,
             batteryHistoryEnabled = p[Keys.BAT_HISTORY] ?: true,
-            hapticsEnabled = p[Keys.HAPTICS] ?: true,
             dashboardWidgets = p[Keys.WIDGETS]?.split(",")?.filter { it.isNotBlank() }
                 ?: DashboardWidget.defaultOrder(),
             graphPointCount = p[Keys.GRAPH_POINTS] ?: 60
@@ -120,7 +117,6 @@ class SettingsRepository(private val context: Context) {
     suspend fun setNotifyNetwork(v: Boolean) = edit { it[Keys.N_NET] = v }
     suspend fun setNotifyTemperature(v: Boolean) = edit { it[Keys.N_TEMP] = v }
     suspend fun setBatteryHistory(v: Boolean) = edit { it[Keys.BAT_HISTORY] = v }
-    suspend fun setHaptics(v: Boolean) = edit { it[Keys.HAPTICS] = v }
     suspend fun setWidgets(ids: List<String>) = edit { it[Keys.WIDGETS] = ids.joinToString(",") }
     suspend fun setGraphPoints(count: Int) = edit { it[Keys.GRAPH_POINTS] = count }
 

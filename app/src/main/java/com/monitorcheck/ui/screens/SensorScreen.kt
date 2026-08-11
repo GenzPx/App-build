@@ -219,6 +219,7 @@ private fun LiveSensorValues(info: SensorInfo, repo: SensorRepository) {
             style = MaterialTheme.typography.labelSmall,
             color = StatusColors.muted
         )
+        val v = version
         if (history.size >= 2) {
             Spacer(Modifier.height(8.dp))
             Sparkline(

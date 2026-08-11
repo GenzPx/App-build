@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.Fmt
-import com.monitorcheck.core.rememberPolled
 import com.monitorcheck.data.battery.BatteryHistoryEntry
 import com.monitorcheck.data.battery.HistoryRange
 import com.monitorcheck.ui.MonitorViewModel
@@ -41,9 +40,7 @@ import com.monitorcheck.ui.theme.StatusColors
 @Composable
 fun BatteryScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
-    // Battery detail sections read sysfs; refresh on a slow timer off the main thread.
-    val sectionsState = rememberPolled(5_000L) { vm.batteryRepo.infoSections() }
-    val sections = sectionsState.value.valueOrNull.orEmpty()
+    val sections = remember(sample?.timestamp) { vm.batteryRepo.infoSections() }
 
     var range by remember { mutableStateOf(HistoryRange.H24) }
     var history by remember { mutableStateOf<List<BatteryHistoryEntry>>(emptyList()) }
