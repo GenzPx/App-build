@@ -36,14 +36,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val initialRoute = intent.getStringExtra(EXTRA_ROUTE) ?: "dashboard"
         setContent {
             val settings by viewModel.settings.collectAsState()
             MonitoredCheckTheme(
                 themeMode = settings.themeMode,
                 dynamicColor = settings.dynamicColor
             ) {
-                MonitoredCheckApp(viewModel)
+                MonitoredCheckApp(viewModel, initialRoute)
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_ROUTE = "com.monitorcheck.extra.ROUTE"
     }
 }

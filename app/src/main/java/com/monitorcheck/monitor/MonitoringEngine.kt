@@ -16,7 +16,8 @@ data class MonitorSample(
     val hottestCelsius: Reading<Double>,
     val batteryCelsius: Reading<Double>,
     val gpuUtilPercent: Reading<Double>,
-    val gpuFreqKHz: Reading<Long>
+    val gpuFreqKHz: Reading<Long>,
+    val cpuTemperatureCelsius: Reading<Double> = Reading.unsupported("CPU thermal zone not sampled")
 )
 
 /** Fixed-size ring buffer for graph series — no unbounded growth on long sessions. */

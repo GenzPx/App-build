@@ -2,6 +2,12 @@
 
 Daftar ide fitur yang sudah disepakati untuk dikerjakan, plus kandidat lain.
 
+**Status branch `feature/all-monitoring-suite`:** paket power-user, threshold alerts,
+home-screen widgets, guide, diagnosis, history, per-app network usage, stress test,
+Quick Settings tile, floating HUD, dan Doze/background analyzer sudah memiliki
+implementasi awal yang dapat dibuild. Item yang masih tertulis di bawah dapat dipakai
+sebagai backlog penyempurnaan UI, OEM compatibility, dan pengujian perangkat nyata.
+
 Aturan yang berlaku untuk **semua** item di sini: tidak boleh ada data palsu. Kalau
 Android tidak mengizinkan suatu data, fitur tetap dibuat tapi menampilkan status
 sebenarnya (Unavailable / Unsupported / Permission Required / Restricted by Android),

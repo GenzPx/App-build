@@ -58,5 +58,14 @@ object Permissions {
     fun hasPhoneState(context: Context): Boolean =
         has(context, android.Manifest.permission.READ_PHONE_STATE)
 
+    fun hasOverlay(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
+
+    fun overlaySettingsIntent(context: Context) =
+        android.content.Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            android.net.Uri.parse("package:${context.packageName}")
+        )
+
     val usageAccessSettingsAction: String = Settings.ACTION_USAGE_ACCESS_SETTINGS
 }

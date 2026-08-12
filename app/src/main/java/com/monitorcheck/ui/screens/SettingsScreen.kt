@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.DashboardWidget
+import com.monitorcheck.core.MonitoringProfile
 import com.monitorcheck.core.NotificationStyle
 import com.monitorcheck.core.Permissions
 import com.monitorcheck.core.SettingsRepository
@@ -92,6 +93,16 @@ fun SettingsScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                         "while the app is in the background.",
                     style = MaterialTheme.typography.labelSmall, color = StatusColors.muted
                 )
+
+                Spacer(Modifier.height(12.dp))
+                Text("Monitoring profile", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState())) {
+                    MonitoringProfile.entries.forEach { profile ->
+                        FilterChip(selected = settings.monitoringProfile == profile, onClick = { vm.setMonitoringProfile(profile) }, label = { Text(profile.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }) }, modifier = Modifier.padding(end = 6.dp))
+                    }
+                }
+                Text("Gaming uses 1s polling; Low Resource skips expensive sources.", style = MaterialTheme.typography.labelSmall, color = StatusColors.muted)
 
                 Spacer(Modifier.height(12.dp))
                 SwitchRow(

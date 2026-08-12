@@ -32,6 +32,22 @@ Each of these states appears in the UI as a coloured chip alongside a plain-lang
 
 ## Features
 
+### New feature pack
+The current branch includes the expanded power-user suite:
+
+- Interactive foreground notification with live CPU/RAM/battery/network/temperature data, pause/resume, alert mute and stop actions.
+- Configurable threshold alerts for CPU usage, CPU/device/battery temperature, RAM, low battery and low storage, with local alert history and cooldowns.
+- Responsive home-screen widgets for compact, standard and large layouts. Each layout shows a different amount of real data.
+- Guide App plus explanatory dialogs shown before opening technical menus.
+- One-tap device diagnosis that combines hardware readings with a full installed-app heuristic scan.
+- Floating overlay HUD, Quick Settings tile and monitoring profiles (Normal, Gaming, Low Resource).
+- Persistent local metric history with trend charts and evidence-based anomaly findings.
+- Per-app Wi-Fi/mobile network totals through Android NetworkStatsManager when Usage Access is granted.
+- CPU stress test with real temperature/frequency observations and automatic thermal stop.
+- Doze, app standby and background activity analyzer. Full per-app wakelock history remains marked as restricted when Android does not expose it.
+
+All of these features preserve the project's no-fake-data rule and explain Android limitations in the UI.
+
 ### Dashboard
 Material You dashboard with live cards for CPU usage, CPU frequency, GPU, memory, storage, battery, battery temperature, device temperature, network throughput, display/FPS and processes. Every card is tappable, and every card can be toggled on/off and reordered from Settings.
 

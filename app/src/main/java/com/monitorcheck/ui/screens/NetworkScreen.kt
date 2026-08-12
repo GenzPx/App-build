@@ -1,5 +1,6 @@
 package com.monitorcheck.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,9 +38,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monitorcheck.core.Fmt
+import com.monitorcheck.core.Permissions
 import com.monitorcheck.monitor.Series
+import com.monitorcheck.network.AppNetworkUsage
+import com.monitorcheck.network.AppNetworkUsageRepository
 import com.monitorcheck.network.NetworkTools
 import com.monitorcheck.network.ToolResult
+import com.monitorcheck.network.UsageRange
 import com.monitorcheck.ui.MonitorViewModel
 import com.monitorcheck.ui.components.MetricValue
 import com.monitorcheck.ui.components.MonoRow
@@ -50,7 +56,7 @@ import com.monitorcheck.ui.theme.StatusColors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-private enum class NetTab(val label: String) { STATUS("Status"), TOOLS("Tools"), INTERFACES("Interfaces") }
+private enum class NetTab(val label: String) { STATUS("Status"), TOOLS("Tools"), INTERFACES("Interfaces"), APP_USAGE("Per-app usage") }
 
 @Composable
 fun NetworkScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
@@ -75,6 +81,7 @@ fun NetworkScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
             NetTab.STATUS -> NetworkStatusTab(vm, inner)
             NetTab.TOOLS -> NetworkToolsTab(inner)
             NetTab.INTERFACES -> NetworkInterfacesTab(vm, inner)
+            NetTab.APP_USAGE -> AppNetworkUsageTab(inner)
         }
     }
 }
@@ -196,6 +203,26 @@ private fun NetworkInterfacesTab(vm: MonitorViewModel, padding: PaddingValues) {
                 }
             }
         }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun AppNetworkUsageTab(padding: PaddingValues) {
+    val context = LocalContext.current
+    val repo = remember { AppNetworkUsageRepository(context.applicationContext) }
+    var range by remember { mutableStateOf(UsageRange.TODAY) }
+    var entries by remember { mutableStateOf<List<AppNetworkUsage>>(emptyList()) }
+    var note by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    LaunchedEffect(range) { loading = true; val r = repo.query(range); entries = r.entries; note = r.note; loading = false }
+    LazyColumn(contentPadding = padding) {
+        item { NoticeCard("Per-app network usage", "Real cumulative byte totals from Android NetworkStatsManager. Grant Usage Access for Android to expose per-app totals.", action = { if (!Permissions.hasUsageStats(context)) OutlinedButton({ runCatching { context.startActivity(Intent(Permissions.usageAccessSettingsAction)) } }) { Text("Grant Usage Access") } }) }
+        item { Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp)) { UsageRange.entries.forEach { r -> FilterChip(range == r, { range = r }, { Text(r.label) }, Modifier.padding(end = 6.dp)) } } }
+        note?.let { item { NoticeCard("Limited network totals", it, tone = StatusColors.warn) } }
+        if (loading) item { Text("Reading Android network accounting…", Modifier.padding(20.dp)) }
+        else if (entries.isEmpty()) item { NoticeCard("No per-app totals available", if (Permissions.hasUsageStats(context)) "No bytes were reported or the device restricted the query." else "Usage Access is required.") }
+        else items(entries.size) { i -> val a = entries[i]; Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .35f))) { Column(Modifier.padding(14.dp)) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Column(Modifier.weight(1f)) { Text(a.label, style = MaterialTheme.typography.titleMedium); Text(a.packageName, style = MaterialTheme.typography.labelSmall, color = StatusColors.muted) }; Text(Fmt.bytes(a.totalBytes), style = MonoNumberStyle) }; MonoRow("Wi-Fi", Fmt.bytes(a.wifiBytes)); MonoRow("Mobile", Fmt.bytes(a.mobileBytes)) } } }
         item { Spacer(Modifier.height(24.dp)) }
     }
 }

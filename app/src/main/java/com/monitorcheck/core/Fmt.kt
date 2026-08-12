@@ -65,6 +65,9 @@ object Fmt {
 
     fun temperature(celsius: Double): String = String.format(Locale.US, "%.1f °C", celsius)
 
+    fun number(value: Double, unit: String): String =
+        String.format(Locale.US, "%.1f%s", value, unit)
+
     fun voltage(millivolt: Int): String = String.format(Locale.US, "%.3f V", millivolt / 1000.0)
 
     fun currentMa(microAmp: Int): String = String.format(Locale.US, "%d mA", microAmp / 1000)
