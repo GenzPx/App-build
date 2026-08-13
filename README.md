@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="MonitoredCheck" width="720">
+</p>
+
 # Monitored Check
 
 An all-in-one Android system monitor, hardware inspector and diagnostics toolkit — built native in Kotlin with Jetpack Compose and Material 3.
