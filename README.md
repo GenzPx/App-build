@@ -36,6 +36,13 @@ Each of these states appears in the UI as a coloured chip alongside a plain-lang
 
 ## Features
 
+### What's new in 1.1.0
+- **Live Monitor** — a dedicated realtime page with every graph in one place: CPU total, CPU per core, RAM, network down/up, battery level, hottest thermal zone and this app's own Choreographer FPS. Includes pause/resume, a selectable time window (1 min / 2 min / 5 min / max) and an explicit data-source caption under every graph.
+- **Credits page** — version, developer, licence, the full open-source stack, the no-fake-data rule and the privacy statement, all documented in Guide App as well.
+- **Fresher home-screen widgets** — an inexact 15-minute alarm now re-reads battery, battery temperature and RAM (all real, cheap sources) even when the in-app engine is off, and the alarm is rescheduled after reboot. Metrics that genuinely need the sampling engine (CPU, network) honestly show "Monitor off" instead of a stale number.
+- **Routing table tool** — on-demand view of the device routing table from the public ConnectivityManager API plus an honest best-effort read of `/proc/net/route`.
+- **Custom bandwidth-test URL** — download and upload tests can now target a server URL you provide; blank keeps the default Cloudflare endpoint, and the result always states which server was measured.
+
 ### New feature pack
 The current branch includes the expanded power-user suite:
 

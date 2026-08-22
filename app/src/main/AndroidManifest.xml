@@ -120,6 +120,9 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/monitor_widget_info" />
         </receiver>
 
+        <!-- Alarm-driven widget refresh so widgets stay fresh without the engine running. -->
+        <receiver android:name=".widget.WidgetRefreshReceiver" android:exported="false" />
+
         <receiver
             android:name=".monitor.BootReceiver"
             android:exported="true"

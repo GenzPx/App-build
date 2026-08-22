@@ -230,9 +230,11 @@ private fun AppNetworkUsageTab(padding: PaddingValues) {
 @Composable
 private fun NetworkToolsTab(padding: PaddingValues) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var host by remember { mutableStateOf("1.1.1.1") }
     var port by remember { mutableStateOf("443") }
     var url by remember { mutableStateOf("https://example.com") }
+    var bandwidthUrl by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<ToolResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     var busyLabel by remember { mutableStateOf("") }
@@ -290,6 +292,13 @@ private fun NetworkToolsTab(padding: PaddingValues) {
                             modifier = Modifier.weight(1f)
                         )
                     }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = bandwidthUrl, onValueChange = { bandwidthUrl = it },
+                        label = { Text("Bandwidth test URL (optional — blank = Cloudflare)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -339,10 +348,23 @@ private fun NetworkToolsTab(padding: PaddingValues) {
                     )
                     ToolButtonRow(
                         listOf(
-                            "Download test" to {
-                                run("Download") { NetworkTools.downloadTest() }
+                            "Routing table" to {
+                                run("Routing table") { NetworkTools.routingTable(context) }
                             },
-                            "Upload test" to { run("Upload") { NetworkTools.uploadTest() } }
+                            "Download test" to {
+                                run("Download") {
+                                    NetworkTools.downloadTest(customUrl = bandwidthUrl.ifBlank { null })
+                                }
+                            }
+                        )
+                    )
+                    ToolButtonRow(
+                        listOf(
+                            "Upload test" to {
+                                run("Upload") {
+                                    NetworkTools.uploadTest(customUrl = bandwidthUrl.ifBlank { null })
+                                }
+                            }
                         )
                     )
 

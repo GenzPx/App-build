@@ -67,7 +67,8 @@ private val titles = mapOf(
     "selinux" to "SELinux", "binder" to "Binder", "drivers" to "Drivers", "display" to "Display", "permissions" to "Permission inspector",
     "scanner" to "Pattern Scanner", "logs" to "Logs & crashes", "report" to "Export report", "alerts" to "Threshold alerts",
     "history" to "History & trends", "diagnosis" to "Device diagnosis", "overlay" to "Floating HUD", "stress" to "Stress test",
-    "power" to "Doze & background activity", "guide" to "Guide App", "settings" to "Settings"
+    "power" to "Doze & background activity", "guide" to "Guide App", "settings" to "Settings",
+    "live" to "Live Monitor", "credits" to "Credits"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,12 +144,15 @@ fun MonitoredCheckApp(vm: MonitorViewModel, initialRoute: String = "dashboard") 
             composable("overlay") { OverlayScreen(vm, padding) }; composable("stress") { StressTestScreen(vm, padding) }
             composable("power") { PowerActivityScreen(padding) }; composable("guide") { GuideScreen(padding) }
             composable("settings") { SettingsScreen(vm, padding) }
+            composable("live") { LiveMonitorScreen(vm, padding) }
+            composable("credits") { CreditsScreen(padding) }
         }
     }
 }
 
 private data class MenuItem(val route: String, val title: String, val subtitle: String)
 private val MONITOR_ITEMS = listOf(
+    MenuItem("live", "Live Monitor", "All realtime graphs on one page — CPU, cores, RAM, network, battery, thermal, FPS"),
     MenuItem("cpu", "CPU", "Cores, frequency and utilisation"), MenuItem("gpu", "GPU", "Renderer, OpenGL ES and Vulkan"),
     MenuItem("memory", "Memory", "RAM, swap and kernel detail"), MenuItem("battery", "Battery", "Level, current, temperature and history"),
     MenuItem("thermal", "Thermal", "Thermal zones and throttling"), MenuItem("sensors", "Sensors", "Inventory and live values"),
@@ -163,7 +167,8 @@ private val MORE_ITEMS = listOf(
     MenuItem("display", "Display", "Resolution, HDR and colour"), MenuItem("permissions", "Permission inspector", "App permissions"),
     MenuItem("scanner", "Pattern Scanner", "Local heuristic app/file scan"), MenuItem("logs", "Logs & crashes", "Own logs and crash reports"),
     MenuItem("report", "Export report", "Full TXT report"), MenuItem("diagnosis", "Device diagnosis", "One-tap hardware and app scan"),
-    MenuItem("guide", "Guide App", "What each menu means"), MenuItem("settings", "Settings", "Intervals, widgets, alerts and theme")
+    MenuItem("guide", "Guide App", "What each menu means"), MenuItem("credits", "Credits", "About, developer, licences and data sources"),
+    MenuItem("settings", "Settings", "Intervals, widgets, alerts and theme")
 )
 
 @Composable

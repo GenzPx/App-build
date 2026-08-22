@@ -8,6 +8,12 @@ Quick Settings tile, floating HUD, dan Doze/background analyzer sudah memiliki
 implementasi awal yang dapat dibuild. Item yang masih tertulis di bawah dapat dipakai
 sebagai backlog penyempurnaan UI, OEM compatibility, dan pengujian perangkat nyata.
 
+**Update 1.1.0:** Live Monitor (semua graph realtime satu halaman dengan pause/resume,
+pilihan window waktu, dan label sumber data), halaman Credits (tercatat juga di
+GuideCatalog), widget refresh via AlarmManager + reschedule setelah boot (metrik yang
+butuh engine ditampilkan jujur sebagai "Monitor off"), tool Routing table, dan URL
+custom untuk bandwidth test — semuanya sudah masuk branch utama.
+
 Aturan yang berlaku untuk **semua** item di sini: tidak boleh ada data palsu. Kalau
 Android tidak mengizinkan suatu data, fitur tetap dibuat tapi menampilkan status
 sebenarnya (Unavailable / Unsupported / Permission Required / Restricted by Android),

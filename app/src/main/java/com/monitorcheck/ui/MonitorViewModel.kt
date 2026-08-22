@@ -61,6 +61,8 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     val series = SeriesStore(capacity = 120)
     private val _seriesVersion = MutableStateFlow(0)
     val seriesVersion: StateFlow<Int> = _seriesVersion.asStateFlow()
+    /** Bounded per-core CPU usage histories for the Live Monitor graphs. */
+    private val perCoreBuffers = LinkedHashMap<Int, com.monitorcheck.monitor.RingBuffer>()
     private var loopJob: Job? = null
     private var inForeground = true
 
@@ -70,7 +72,9 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     fun togglePause() { _paused.value = !_paused.value }
     fun toggleRunning() = if (_running.value) stop() else start()
     fun setForeground(foreground: Boolean) { inForeground = foreground }
-    fun clearSeries() { series.clear(); _seriesVersion.value++ }
+    fun clearSeries() { series.clear(); synchronized(perCoreBuffers) { perCoreBuffers.values.forEach { it.clear() } }; _seriesVersion.value++ }
+    /** Immutable snapshot of the per-core CPU histories, keyed by core id. */
+    fun perCoreSnapshot(): Map<Int, List<Float>> = synchronized(perCoreBuffers) { perCoreBuffers.mapValues { it.value.toList() } }
 
     private suspend fun loop() {
         while (viewModelScope.isActive) {
@@ -105,6 +109,14 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     private fun record(sample: MonitorSample) {
         var changed = false
         sample.cpu?.totalPercent?.value?.let { series.add(Series.CPU, it.toFloat()); changed = true }
+        sample.cpu?.perCorePercent?.takeIf { it.isNotEmpty() }?.let { perCore ->
+            synchronized(perCoreBuffers) {
+                perCore.forEach { (id, pct) ->
+                    perCoreBuffers.getOrPut(id) { com.monitorcheck.monitor.RingBuffer(120) }.add(pct.toFloat())
+                }
+            }
+            changed = true
+        }
         sample.cpu?.cores?.mapNotNull { it.currentKHz }?.maxOrNull()?.let { series.add(Series.CPU_FREQ, (it / 1000).toFloat()); changed = true }
         sample.memory.value?.let { series.add(Series.RAM, it.usedPercent.toFloat()); changed = true }
         sample.battery.value?.let { series.add(Series.BATTERY_LEVEL, it.levelPercent.toFloat()); it.currentNowUa?.let { c -> series.add(Series.BATTERY_CURRENT, c / 1000f) }; changed = true }

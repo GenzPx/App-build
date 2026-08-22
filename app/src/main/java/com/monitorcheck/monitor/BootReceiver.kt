@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Restarts background monitoring after a reboot, but only if the user had explicitly
- * enabled it. If the setting is off, this receiver does nothing at all.
+ * Runs after a reboot:
+ *  - restarts background monitoring, but only if the user had explicitly enabled it;
+ *  - reschedules the widget refresh alarm when home-screen widgets exist
+ *    (alarms do not survive a reboot on their own).
+ * If neither applies, this receiver does nothing at all.
  */
 class BootReceiver : BroadcastReceiver() {
 
@@ -21,6 +24,9 @@ class BootReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                if (com.monitorcheck.widget.WidgetRefreshScheduler.hasWidgets(appContext)) {
+                    com.monitorcheck.widget.WidgetRefreshScheduler.schedule(appContext)
+                }
                 val settings = SettingsRepository(appContext).settings.first()
                 if (settings.backgroundMonitoring) {
                     MonitoringService.start(appContext)
