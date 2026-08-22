@@ -23,8 +23,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // Tell the monitoring engine when we are visible so it can throttle polling
-        // while backgrounded. This is the main battery-saving lever.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.setForeground(true)

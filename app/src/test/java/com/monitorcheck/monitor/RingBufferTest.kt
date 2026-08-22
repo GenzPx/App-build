@@ -4,10 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * The ring buffer bounds graph memory. If it grew without limit a long monitoring
- * session would leak, so its wrap-around behaviour is verified precisely.
- */
 class RingBufferTest {
 
     @Test
@@ -45,7 +41,7 @@ class RingBufferTest {
     fun `statistics reflect only retained values`() {
         val b = RingBuffer(3)
         listOf(10f, 20f, 30f, 40f).forEach { b.add(it) }
-        // Retains 20, 30, 40
+
         assertEquals(20f, b.min(), 0.001f)
         assertEquals(40f, b.max(), 0.001f)
         assertEquals(30f, b.average(), 0.001f)

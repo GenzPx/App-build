@@ -10,8 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.monitorcheck"
-        // minSdk 24 (Android 7.0) keeps compatibility broad while still allowing
-        // the Jetpack/Compose stack and modern APIs used by the monitoring engine.
+
         minSdk = 24
         targetSdk = 35
         versionCode = 2
@@ -34,8 +33,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // No signing config is committed. CI produces an unsigned release APK
-            // (or signs it from GitHub Secrets) — never from a key in the repo.
+
             signingConfig = null
         }
     }

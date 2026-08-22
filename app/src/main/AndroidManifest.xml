@@ -2,35 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!--
-      Permission policy for Monitored Check.
-      Nothing is requested at first launch. Each permission below is requested at
-      runtime only when the user opens the feature that needs it, with an
-      explanation shown first. Denial always falls back to a documented
-      "Permission Required" state instead of a crash or fake data.
-    -->
-
-    <!-- Network tools (ping, DNS, HTTP test, speed test, public IP). Used only on user action. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <!-- SSID/BSSID are gated behind location by Android 8.1+. Requested only in Network Analyzer. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- Optional background monitoring foreground service. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
         tools:targetApi="34" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Battery history survives reboot; used to mark boot events in the history DB. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Storage analyzer. Legacy read for API <= 29; MANAGE_EXTERNAL_STORAGE is optional
-         and only requested if the user explicitly enables deep analysis. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -38,20 +24,16 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
-    <!-- Usage Access / app sizes. Special access, user must grant in Settings. -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- Installed app inventory on Android 11+. -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
-    <!-- Carrier / network operator details in Network Analyzer. -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
-    <!-- Bluetooth capability reporting (no scanning is performed). -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -59,7 +41,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- Hardware is reported, never required: the app must install on any device. -->
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
@@ -97,7 +78,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Optional persistent monitoring. Disabled by default; user opt-in only. -->
         <service
             android:name=".monitor.MonitoringService"
             android:exported="false"
@@ -120,7 +100,6 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/monitor_widget_info" />
         </receiver>
 
-        <!-- Alarm-driven widget refresh so widgets stay fresh without the engine running. -->
         <receiver android:name=".widget.WidgetRefreshReceiver" android:exported="false" />
 
         <receiver
@@ -132,7 +111,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- Used to share exported TXT reports and logs without world-readable files. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

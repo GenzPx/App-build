@@ -28,19 +28,11 @@ data class MemorySnapshot(
         if (swapTotalBytes != null && swapFreeBytes != null) swapTotalBytes - swapFreeBytes else null
 }
 
-/**
- * RAM / swap / zRAM information.
- *
- * Primary source is ActivityManager.MemoryInfo (always available). /proc/meminfo is
- * used to enrich with cached/buffers/swap when readable — it is world-readable on
- * essentially all Android versions, but we never assume that.
- */
 class MemoryRepository(private val context: Context) {
 
     private val activityManager: ActivityManager? =
         context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
 
-    /** Parses /proc/meminfo into a map of kB values. */
     fun readMemInfo(): Map<String, Long> {
         val lines = SysFs.readLines("/proc/meminfo") ?: return emptyMap()
         val map = HashMap<String, Long>()
@@ -92,7 +84,6 @@ class MemoryRepository(private val context: Context) {
         )
     }
 
-    /** zRAM is exposed as a block device; disksize is its configured backing size. */
     private fun readZramTotal(): Long? {
         for (i in 0..3) {
             SysFs.readLong("/sys/block/zram$i/disksize")?.let { if (it > 0) return it }
@@ -100,7 +91,6 @@ class MemoryRepository(private val context: Context) {
         return null
     }
 
-    /** Memory used by the Monitored Check process itself. */
     fun ownProcessMemory(): Reading<Long> = try {
         val info = Debug.MemoryInfo()
         Debug.getMemoryInfo(info)

@@ -7,8 +7,6 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-# Only the default read permission is needed. No secrets are consumed by this
-# workflow, and no credentials are ever written into the APK or the repository.
 permissions:
   contents: read
 
@@ -71,9 +69,6 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      # Release is built unsigned on purpose: no keystore or credential is stored
-      # in this repository. Sign locally, or add a signing step that reads from
-      # GitHub Secrets in your own fork.
       - name: Build unsigned release APK
         run: ./gradlew assembleRelease --stacktrace
         continue-on-error: true

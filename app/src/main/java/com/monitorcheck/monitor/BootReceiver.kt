@@ -9,13 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/**
- * Runs after a reboot:
- *  - restarts background monitoring, but only if the user had explicitly enabled it;
- *  - reschedules the widget refresh alarm when home-screen widgets exist
- *    (alarms do not survive a reboot on their own).
- * If neither applies, this receiver does nothing at all.
- */
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,7 +25,7 @@ class BootReceiver : BroadcastReceiver() {
                     MonitoringService.start(appContext)
                 }
             } catch (_: Throwable) {
-                // Never crash on boot.
+
             } finally {
                 pending.finish()
             }

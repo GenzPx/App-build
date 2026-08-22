@@ -33,7 +33,7 @@ import com.monitorcheck.ui.theme.StatusColors
 fun MemoryScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
     val version by vm.seriesVersion.collectAsStateWithLifecycle()
-    // Recomputed each time a new sample arrives so kernel counters stay current.
+
     val sections = remember(sample?.timestamp) { vm.memoryRepo.infoSections() }
 
     LazyColumn(contentPadding = contentPadding) {

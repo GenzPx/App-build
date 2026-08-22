@@ -17,7 +17,6 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.NetworkInterface
 
-/** Byte counters + computed rates. Rates are only produced from two real samples. */
 data class NetworkThroughput(
     val rxBytes: Long,
     val txBytes: Long,
@@ -37,14 +36,6 @@ data class InterfaceStats(
     val txBytes: Long?
 )
 
-/**
- * Network information and throughput.
- *
- * Throughput uses TrafficStats total byte counters, which are always available to
- * apps. Per-interface counters come from /sys/class/net/<iface>/statistics when the
- * kernel exports them. MAC addresses are hard-blocked by Android 6+ for third-party
- * apps — we report that restriction rather than a fake or constant value.
- */
 class NetworkRepository(private val context: Context) {
 
     private val connectivityManager =
@@ -58,7 +49,6 @@ class NetworkRepository(private val context: Context) {
     private var lastTx = -1L
     private var lastSampleTime = 0L
 
-    /** Samples global byte counters and derives rates from the delta. */
     fun sampleThroughput(): NetworkThroughput? {
         val rx = TrafficStats.getTotalRxBytes()
         val tx = TrafficStats.getTotalTxBytes()
@@ -72,7 +62,7 @@ class NetworkRepository(private val context: Context) {
         lastRx = rx; lastTx = tx; lastSampleTime = now
 
         if (prevRx < 0 || prevTime == 0L) {
-            // First sample: counters are real, rates are not computable yet.
+
             return NetworkThroughput(rx, tx, 0.0, 0.0, 0L)
         }
         val elapsed = now - prevTime
@@ -89,7 +79,6 @@ class NetworkRepository(private val context: Context) {
 
     fun resetThroughputBaseline() { lastRx = -1; lastTx = -1; lastSampleTime = 0 }
 
-    /** Active transport type as a readable label. */
     fun activeConnectionType(): Reading<String> {
         val cm = connectivityManager ?: return Reading.unavailable("ConnectivityManager unavailable")
         return try {
@@ -218,8 +207,7 @@ class NetworkRepository(private val context: Context) {
         }
 
         val hasLocation = Permissions.hasLocation(context)
-        // Android 8.1+ requires location permission for SSID/BSSID. Without it the
-        // platform returns "<unknown ssid>" / 02:00:00:00:00:00 — we must not show those.
+
         if (hasLocation) {
             val ssid = info.ssid?.trim('"')
             items.add(InfoItem("SSID", if (!ssid.isNullOrBlank() && ssid != "<unknown ssid>")
@@ -279,7 +267,6 @@ class NetworkRepository(private val context: Context) {
             items.add(InfoItem("Roaming", Reading.available(
                 Fmt.yesNo(tm.isNetworkRoaming), "TelephonyManager")))
 
-            // getDataNetworkType needs READ_PHONE_STATE from API 30 onward.
             val netType = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
                 Permissions.hasPhoneState(context)) {
                 try { Reading.available(networkTypeLabel(tm.dataNetworkType), "TelephonyManager") }
@@ -295,7 +282,6 @@ class NetworkRepository(private val context: Context) {
         return InfoSection("Mobile network", items)
     }
 
-    /** Enumerates interfaces via the standard NetworkInterface API + kernel counters. */
     fun interfaces(): Reading<List<InterfaceStats>> = try {
         val list = NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().map { ni ->
             InterfaceStats(
@@ -304,7 +290,7 @@ class NetworkRepository(private val context: Context) {
                 isLoopback = runCatching { ni.isLoopback }.getOrDefault(false),
                 mtu = runCatching { ni.mtu }.getOrDefault(-1),
                 addresses = ni.inetAddresses.toList().mapNotNull { it.hostAddress },
-                // Hardware address is null for third-party apps on Android 6+.
+
                 hardwareAddress = runCatching {
                     ni.hardwareAddress?.joinToString(":") { b -> "%02X".format(b) }
                 }.getOrNull(),

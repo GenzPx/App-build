@@ -8,7 +8,6 @@ import com.monitorcheck.core.Reading
 import com.monitorcheck.core.SysFs
 import java.io.File
 
-/** Snapshot of the aggregate + per-core jiffy counters from /proc/stat. */
 data class CpuTimes(
     val user: Long, val nice: Long, val system: Long, val idle: Long,
     val iowait: Long, val irq: Long, val softirq: Long, val steal: Long
@@ -39,14 +38,6 @@ data class CpuUsage(
     val loadAverage: Reading<Triple<Double, Double, Double>>
 )
 
-/**
- * CPU information and utilisation.
- *
- * Utilisation is computed by differencing /proc/stat jiffy counters between two
- * samples — the same method top/htop use. On Android 8+ /proc/stat is often
- * restricted for non-system apps under the hidepid mount option; in that case we
- * report the restriction instead of inventing numbers.
- */
 class CpuRepository {
 
     private companion object {
@@ -58,7 +49,6 @@ class CpuRepository {
 
     val coreCount: Int = Runtime.getRuntime().availableProcessors()
 
-    /** Reads /proc/stat and parses aggregate + per-core lines. */
     fun readStat(): CpuStatSnapshot? {
         val lines = SysFs.readLines(PROC_STAT) ?: return null
         var aggregate: CpuTimes? = null
@@ -87,10 +77,6 @@ class CpuRepository {
         return CpuStatSnapshot(aggregate, perCore)
     }
 
-    /**
-     * Samples utilisation. The first call after construction establishes the
-     * baseline and returns UNAVAILABLE for percentages (a delta needs two samples).
-     */
     fun sampleUsage(): CpuUsage {
         val current = readStat()
         val previous = lastSnapshot
@@ -168,10 +154,6 @@ class CpuRepository {
         else Reading.unavailable("Unparseable /proc/loadavg")
     }
 
-    /**
-     * Groups cores into clusters by their max frequency — this is how big.LITTLE
-     * topology is exposed to unprivileged apps.
-     */
     fun clusterTopology(): List<Pair<Long, List<Int>>> {
         val cores = readCores()
         return cores.filter { it.maxKHz != null }
@@ -194,7 +176,6 @@ class CpuRepository {
         return map
     }
 
-    /** Static CPU/SoC description. */
     fun staticInfo(): List<InfoSection> {
         val info = readCpuInfo()
         val clusters = clusterTopology()
@@ -275,7 +256,6 @@ class CpuRepository {
         )
     }
 
-    /** Best-effort CPU temperature from a thermal zone whose type mentions cpu/soc. */
     fun cpuTemperature(): Reading<Double> {
         val zones = SysFs.listDir("/sys/class/thermal") { it.startsWith("thermal_zone") }
         for (zone in zones) {
@@ -291,7 +271,6 @@ class CpuRepository {
         return Reading.unavailable("No readable CPU thermal zone")
     }
 
-    /** Thermal nodes report milli-, deci- or plain Celsius depending on the vendor. */
     private fun normaliseTemp(raw: Long): Double = when {
         raw > 10_000 -> raw / 1000.0
         raw > 1_000 -> raw / 100.0

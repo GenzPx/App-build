@@ -37,24 +37,12 @@ data class LogLine(
     val message: String
 )
 
-/**
- * Logcat access.
- *
- * Since Android 4.1 (Jelly Bean) the READ_LOGS permission is signature|privileged:
- * a normal app can ONLY read log entries produced by its own UID. Monitored Check
- * uses the supported `logcat` invocation and clearly reports that the visible output
- * is limited to this app's own process. No exploit, no bypass.
- */
 class LogcatRepository(private val context: Context) {
 
-    /**
-     * Threadtime format: "MM-DD HH:MM:SS.mmm  PID  TID P TAG: message"
-     */
     private val threadtimeRegex = Regex(
         """^(\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(\d+)\s+(\d+)\s+([VDIWEFS])\s+([^:]*?):\s?(.*)$"""
     )
 
-    /** Whether the platform grants system-wide log access to this app (normally false). */
     fun accessLevel(): Reading<String> {
         val hasReadLogs = context.checkSelfPermission("android.permission.READ_LOGS") ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -72,7 +60,6 @@ class LogcatRepository(private val context: Context) {
         }
     }
 
-    /** Reads a bounded snapshot of the log buffer. */
     suspend fun dump(maxLines: Int = 500): Reading<List<LogLine>> = withContext(Dispatchers.IO) {
         try {
             val cmd = listOf("logcat", "-d", "-v", "threadtime", "-t", maxLines.toString())
@@ -105,10 +92,6 @@ class LogcatRepository(private val context: Context) {
         }
     }
 
-    /**
-     * Continuous log stream. The reader process is destroyed when collection stops so
-     * no orphan process is left running.
-     */
     fun stream(): Flow<LogLine> = callbackFlow {
         var process: Process? = null
         val thread = Thread {
@@ -123,7 +106,7 @@ class LogcatRepository(private val context: Context) {
                     }
                 }
             } catch (_: Throwable) {
-                // Process spawning may be denied; the UI already shows the access level.
+
             } finally {
                 close()
             }
@@ -138,7 +121,7 @@ class LogcatRepository(private val context: Context) {
 
     private fun parse(line: String): LogLine? {
         if (line.isBlank()) return null
-        if (line.startsWith("---------")) return null // buffer switch markers
+        if (line.startsWith("---------")) return null
         val m = threadtimeRegex.find(line)
         return if (m != null) {
             val (ts, pid, tid, pri, tag, msg) = m.destructured
@@ -160,7 +143,6 @@ class LogcatRepository(private val context: Context) {
             (query.isBlank() || l.raw.contains(query, true))
     }
 
-    /** Writes the given lines to a file in the app's private logs directory. */
     suspend fun export(lines: List<LogLine>): Reading<File> = withContext(Dispatchers.IO) {
         try {
             val dir = File(context.filesDir, "logs").apply { mkdirs() }
@@ -181,5 +163,4 @@ class LogcatRepository(private val context: Context) {
     }
 }
 
-/** Small helper so destructuring a 6-group MatchResult stays readable. */
 private operator fun <T> List<T>.component6(): T = this[5]

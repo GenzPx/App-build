@@ -44,16 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Locale
 
-/**
- * Live Monitor — realtime graphs for every core metric on one page.
- *
- * All series come from the single central monitoring engine (no extra pollers),
- * except FPS which is measured with Choreographer on this app's own render loop
- * while this page is open and stops the moment the page closes.
- *
- * Every graph states its real data source. Nothing here is simulated.
- */
-private data class TimeWindow(val label: String, val seconds: Int) // seconds == 0 -> everything buffered
+private data class TimeWindow(val label: String, val seconds: Int)
 
 private val WINDOWS = listOf(
     TimeWindow("1 min", 60),
@@ -72,7 +63,6 @@ fun LiveMonitorScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
     var windowIndex by remember { mutableIntStateOf(1) }
 
-    // FPS is sampled only while this screen is visible — own render loop only.
     val displayRepo = remember { DisplayRepository(context) }
     val refreshHz = remember { displayRepo.refreshRate().value ?: 60f }
     val fpsMonitor = remember { FpsMonitor(refreshHz) }
@@ -104,7 +94,6 @@ fun LiveMonitorScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
         return if (values.size > points) values.takeLast(points) else values
     }
 
-    // seriesVersion is read so this whole screen recomposes on each engine tick.
     @Suppress("UNUSED_EXPRESSION") seriesVersion
 
     LazyColumn(contentPadding = contentPadding) {

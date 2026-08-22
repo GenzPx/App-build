@@ -21,10 +21,6 @@ enum class ThermalCategory(val label: String) {
     CHARGER("Charger"), OTHER("Other")
 }
 
-/**
- * Thermal zones from /sys/class/thermal plus the official PowerManager thermal
- * status (API 29+), which is the only *supported* throttling signal for apps.
- */
 class ThermalRepository(private val context: Context) {
 
     private val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -61,7 +57,6 @@ class ThermalRepository(private val context: Context) {
         else Reading.available(zones, "/sys/class/thermal")
     }
 
-    /** Official thermal throttling status. Only available on Android 10+. */
     fun thermalStatus(): Reading<String> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             return Reading.unsupported("PowerManager thermal status requires Android 10 (API 29)")
@@ -90,7 +85,6 @@ class ThermalRepository(private val context: Context) {
         else -> "Unknown ($status)"
     }
 
-    /** Highest currently readable temperature, used by the dashboard "device temp" card. */
     fun hottestZone(): Reading<ThermalZone> {
         val zones = readZones()
         val hottest = zones.value?.maxByOrNull { it.celsius }

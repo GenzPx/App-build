@@ -27,13 +27,6 @@ import com.monitorcheck.ui.components.MonoRow
 import com.monitorcheck.ui.components.NoticeCard
 import com.monitorcheck.ui.theme.StatusColors
 
-/**
- * Credits / About page.
- *
- * Static information only — no network call is made from this page. The single
- * button that opens the project repository hands the URL to the system browser
- * via an ordinary VIEW intent; the app itself never fetches anything.
- */
 private const val REPO_URL = "https://github.com/GenzPx/MonitoredCheck"
 
 @Composable

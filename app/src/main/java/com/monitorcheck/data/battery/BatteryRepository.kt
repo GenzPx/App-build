@@ -30,20 +30,12 @@ data class BatterySnapshot(
     val capacityDesignUah: Int?,
     val timestamp: Long
 ) {
-    /** Instantaneous power in watts, computed only when both V and I are real readings. */
+
     val powerWatts: Double?
         get() = if (voltageMv != null && currentNowUa != null)
             (voltageMv / 1000.0) * (currentNowUa / 1_000_000.0) else null
 }
 
-/**
- * Battery information.
- *
- * Primary sources are the sticky ACTION_BATTERY_CHANGED broadcast and BatteryManager
- * (both public APIs). Cycle count and design capacity have no public API on most
- * devices/versions, so we try the standard power_supply sysfs nodes and report
- * Unavailable when the kernel does not export them. Nothing is estimated or invented.
- */
 class BatteryRepository(private val context: Context) {
 
     private val batteryManager =
@@ -51,7 +43,6 @@ class BatteryRepository(private val context: Context) {
 
     private val powerSupplyBase = "/sys/class/power_supply"
 
-    /** Reads the sticky battery broadcast (no receiver registration required). */
     private fun batteryIntent(): Intent? = try {
         context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     } catch (_: Throwable) {
@@ -98,7 +89,7 @@ class BatteryRepository(private val context: Context) {
 
     private fun intProperty(id: Int): Int? = try {
         val v = batteryManager?.getIntProperty(id)
-        // BatteryManager returns Integer.MIN_VALUE when a property is unsupported.
+
         if (v == null || v == Int.MIN_VALUE) null else v
     } catch (_: Throwable) { null }
 
@@ -107,10 +98,6 @@ class BatteryRepository(private val context: Context) {
         if (v == null || v == Long.MIN_VALUE) null else v
     } catch (_: Throwable) { null }
 
-    /**
-     * Cycle count: EXTRA_CYCLE_COUNT exists from Android 14. Older devices sometimes
-     * export it via sysfs. If neither works we report Unavailable — never a guess.
-     */
     private fun readCycleCount(intent: Intent): Int? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val v = intent.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1)
@@ -122,7 +109,6 @@ class BatteryRepository(private val context: Context) {
         return null
     }
 
-    /** Design capacity in µAh from the standard power_supply class, when exported. */
     private fun readDesignCapacityUah(): Int? {
         for (name in listOf("battery", "bms")) {
             SysFs.readLong("$powerSupplyBase/$name/charge_full_design")?.let {
@@ -229,7 +215,7 @@ class BatteryRepository(private val context: Context) {
         BatteryManager.BATTERY_PLUGGED_AC -> "AC charger"
         BatteryManager.BATTERY_PLUGGED_USB -> "USB"
         BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
-        4 -> "Dock" // BATTERY_PLUGGED_DOCK, API 33+
+        4 -> "Dock"
         0 -> "Not plugged in"
         else -> "Unknown"
     }

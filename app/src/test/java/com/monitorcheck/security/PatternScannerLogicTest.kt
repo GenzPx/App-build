@@ -4,13 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Risk-level thresholds are a user-facing contract: the same score must always map to
- * the same label, and the scanner must never silently escalate a clean result.
- */
 class PatternScannerLogicTest {
 
-    /** Mirrors PatternScanner.levelFor. */
     private fun levelFor(score: Int): RiskLevel = when {
         score <= 0 -> RiskLevel.SAFE
         score < 15 -> RiskLevel.LOW

@@ -23,23 +23,11 @@ data class GpuInfo(
     val extensions: List<String>
 )
 
-/**
- * GPU information.
- *
- * Vendor/renderer/version come from a real off-screen EGL + OpenGL ES context
- * (glGetString) — this is the only supported way for an app to identify the GPU.
- * Utilisation and frequency have no Android API at all; we try the well-known
- * vendor sysfs nodes and otherwise report Unsupported rather than fabricating values.
- */
 class GpuRepository(private val context: Context) {
 
     @Volatile
     private var cached: GpuInfo? = null
 
-    /**
-     * Creates a 1x1 pbuffer EGL context on the calling thread, queries the GL
-     * strings, then tears everything down. Result is cached — this is not cheap.
-     */
     fun queryGl(): Reading<GpuInfo> {
         cached?.let { return Reading.available(it, "OpenGL ES glGetString") }
 
@@ -103,11 +91,10 @@ class GpuRepository(private val context: Context) {
                     eglContext?.let { EGL14.eglDestroyContext(display, it) }
                     EGL14.eglTerminate(display)
                 }
-            } catch (_: Throwable) { /* teardown is best effort */ }
+            } catch (_: Throwable) {  }
         }
     }
 
-    /** OpenGL ES version advertised by the package manager (does not need a context). */
     fun glEsVersion(): Reading<String> = try {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         val v = am.deviceConfigurationInfo.glEsVersion
@@ -116,7 +103,6 @@ class GpuRepository(private val context: Context) {
         Reading.error(t.message)
     }
 
-    /** Vulkan support level from the system feature flags. */
     fun vulkanInfo(): List<InfoItem> {
         val pm = context.packageManager
         val items = ArrayList<InfoItem>()
@@ -132,7 +118,7 @@ class GpuRepository(private val context: Context) {
             }
             val v = feature?.version
             items.add(InfoItem("Vulkan API version", if (v != null && v > 0) {
-                // Version is packed as Vulkan's VK_MAKE_VERSION.
+
                 val major = (v shr 22) and 0x7F
                 val minor = (v shr 12) and 0x3FF
                 val patch = v and 0xFFF
@@ -161,26 +147,22 @@ class GpuRepository(private val context: Context) {
         return items
     }
 
-    /**
-     * GPU frequency from vendor sysfs. Adreno (kgsl) and Mali (devfreq) expose it on
-     * many devices; on others the node exists but is not world-readable.
-     */
     fun gpuFrequency(): Reading<Long> {
         val candidates = listOf(
-            "/sys/class/kgsl/kgsl-3d0/gpuclk" to 1L,               // Hz on Adreno
-            "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq" to 1L,     // Hz
-            "/sys/kernel/gpu/gpu_clock" to 1000L,                  // MHz on some Exynos
+            "/sys/class/kgsl/kgsl-3d0/gpuclk" to 1L,
+            "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq" to 1L,
+            "/sys/kernel/gpu/gpu_clock" to 1000L,
             "/sys/class/devfreq/gpufreq/cur_freq" to 1L,
             "/sys/class/misc/mali0/device/clock" to 1000L
         )
         for ((path, _) in candidates) {
             val raw = SysFs.readLong(path) ?: continue
             if (raw <= 0) continue
-            // Normalise to kHz for display consistency with the CPU pages.
+
             val khz = when {
-                raw > 100_000_000 -> raw / 1000       // Hz
-                raw > 100_000 -> raw                  // already kHz
-                else -> raw * 1000                    // MHz
+                raw > 100_000_000 -> raw / 1000
+                raw > 100_000 -> raw
+                else -> raw * 1000
             }
             return Reading.available(khz, path)
         }
@@ -189,10 +171,6 @@ class GpuRepository(private val context: Context) {
         )
     }
 
-    /**
-     * GPU utilisation. Adreno exposes gpu_busy_percentage / gpubusy; Mali exposes
-     * utilization on some kernels. Anything else is genuinely unavailable.
-     */
     fun gpuUtilisation(): Reading<Double> {
         SysFs.readFirstLine("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage")?.let { line ->
             val v = line.filter { it.isDigit() || it == '.' }.toDoubleOrNull()
@@ -200,7 +178,7 @@ class GpuRepository(private val context: Context) {
                 return Reading.available(v, "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage")
             }
         }
-        // gpubusy reports "busy total" jiffy pairs; ratio is a real utilisation figure.
+
         SysFs.readFirstLine("/sys/class/kgsl/kgsl-3d0/gpubusy")?.let { line ->
             val parts = line.trim().split(Regex("\\s+")).mapNotNull { it.toLongOrNull() }
             if (parts.size >= 2 && parts[1] > 0) {

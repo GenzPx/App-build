@@ -64,7 +64,6 @@ fun TaskScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     var sort by remember { mutableStateOf(ProcSort.IMPORTANCE) }
     var selected by remember { mutableStateOf<ProcessEntry?>(null) }
 
-    // Refresh whenever the shared engine produces a new sample.
     LaunchedEffect(sample?.timestamp, tab) {
         when (tab) {
             TaskTab.PROCESSES -> processes = repo.runningProcesses()

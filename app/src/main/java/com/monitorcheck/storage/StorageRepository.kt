@@ -34,18 +34,10 @@ data class MountPoint(
     val options: String
 )
 
-/**
- * Storage volumes, mount points and block-device statistics.
- *
- * Capacities come from StatFs / StorageStatsManager (public APIs). Mount details come
- * from /proc/mounts. Real SMART-style health data is not available to Android apps,
- * so the health section reports only what the kernel genuinely exposes.
- */
 class StorageRepository(private val context: Context) {
 
     private val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as? StorageManager
 
-    /** All storage volumes visible to the app, using the StorageManager volume list. */
     fun volumes(): Reading<List<VolumeInfo>> {
         val out = ArrayList<VolumeInfo>()
         try {
@@ -60,7 +52,7 @@ class StorageRepository(private val context: Context) {
                     }
                     val state = runCatching { volume.state }.getOrDefault(Environment.MEDIA_UNKNOWN)
                     if (dir == null || !dir.exists()) {
-                        // Volume known but not mounted (e.g. ejected SD card): report honestly.
+
                         out.add(VolumeInfo(
                             label = volume.getDescription(context) ?: "Volume",
                             path = "Not mounted",
@@ -89,7 +81,7 @@ class StorageRepository(private val context: Context) {
                 }
             }
             if (out.isEmpty()) {
-                // Fallback for API 24 or unusual OEM implementations.
+
                 val dir = Environment.getDataDirectory()
                 val stat = StatFs(dir.absolutePath)
                 val total = stat.blockCountLong * stat.blockSizeLong
@@ -103,10 +95,6 @@ class StorageRepository(private val context: Context) {
         }
     }
 
-    /**
-     * Total/free for the primary data partition, as reported by StorageStatsManager
-     * (API 26+) which accounts for reserved space more accurately than StatFs.
-     */
     fun primaryTotals(): Reading<Pair<Long, Long>> {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
@@ -115,7 +103,7 @@ class StorageRepository(private val context: Context) {
                 val total = ssm.getTotalBytes(uuid)
                 val free = ssm.getFreeBytes(uuid)
                 return Reading.available(total to free, "StorageStatsManager")
-            } catch (_: Throwable) { /* fall through to StatFs */ }
+            } catch (_: Throwable) {  }
         }
         return try {
             val stat = StatFs(Environment.getDataDirectory().absolutePath)
@@ -144,10 +132,6 @@ class StorageRepository(private val context: Context) {
             ?.maxByOrNull { it.mountPoint.length }
             ?.filesystem
 
-    /**
-     * Block device I/O statistics from /proc/diskstats. Fields 3 and 7 are sectors
-     * read/written; sectors are 512 bytes by kernel convention.
-     */
     fun diskStats(): Reading<List<Triple<String, Long, Long>>> {
         val lines = SysFs.readLines("/proc/diskstats")
             ?: return Reading.restricted("/proc/diskstats is not readable")
@@ -155,7 +139,7 @@ class StorageRepository(private val context: Context) {
             val p = line.trim().split(Regex("\\s+"))
             if (p.size < 10) return@mapNotNull null
             val name = p[2]
-            // Keep real storage devices, skip loop/ram/dm noise.
+
             if (!(name.startsWith("sd") || name.startsWith("mmcblk") ||
                     name.startsWith("nvme") || name.startsWith("sda"))) return@mapNotNull null
             if (name.contains("p") && name.startsWith("mmcblk") && name.count { it.isDigit() } > 2) {
@@ -169,11 +153,9 @@ class StorageRepository(private val context: Context) {
         else Reading.available(interesting, "/proc/diskstats")
     }
 
-    /** What the kernel genuinely exposes about the storage medium. */
     fun healthSection(): InfoSection {
         val items = ArrayList<InfoItem>()
 
-        // eMMC/UFS life-time estimates, when the vendor exports them.
         val lifeA = SysFs.readFirstLine("/sys/class/mmc_host/mmc0/mmc0:0001/life_time")
             ?: SysFs.readFirstLine("/sys/block/mmcblk0/device/life_time")
         items.add(InfoItem("eMMC life time estimate", lifeA?.let {
@@ -219,7 +201,7 @@ class StorageRepository(private val context: Context) {
     }
 
     private fun decodeLifeTime(raw: String): String {
-        // Values are hex bands: 0x01 = 0-10% used, 0x02 = 10-20% ... 0x0B = EOL.
+
         val parts = raw.trim().split(Regex("\\s+"))
         return parts.joinToString("; ") { p ->
             val v = p.removePrefix("0x").toIntOrNull(16)

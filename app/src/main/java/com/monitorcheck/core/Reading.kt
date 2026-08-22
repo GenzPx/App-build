@@ -1,13 +1,5 @@
 package com.monitorcheck.core
 
-/**
- * Every value surfaced by Monitored Check carries an explicit availability status.
- *
- * This is the backbone of the app's "never fake data" rule: a repository may only
- * return [DataStatus.AVAILABLE] when it actually read the value from a real Android
- * API, sysfs/procfs node, or hardware sensor. Anything else must return one of the
- * non-available statuses together with a human readable reason.
- */
 enum class DataStatus(val label: String) {
     AVAILABLE("Available"),
     LIMITED("Limited"),
@@ -22,14 +14,6 @@ enum class DataStatus(val label: String) {
     UNKNOWN("Unknown")
 }
 
-/**
- * A single measured or read value.
- *
- * @param status  availability of the value
- * @param value   the real value, non-null only when [status] is AVAILABLE or LIMITED
- * @param note    optional explanation (why unavailable, how it was measured, ...)
- * @param source  where the value came from, e.g. "/proc/stat" or "BatteryManager"
- */
 data class Reading<out T>(
     val status: DataStatus,
     val value: T? = null,
@@ -42,7 +26,6 @@ data class Reading<out T>(
         if (isAvailable) Reading(status, transform(value as T), note, source)
         else Reading(status, null, note, source)
 
-    /** Text for UI display: the formatted value, or the availability label. */
     fun display(format: (T) -> String = { it.toString() }): String =
         if (isAvailable) format(value as T) else status.label
 
@@ -74,7 +57,6 @@ data class Reading<out T>(
     }
 }
 
-/** A label/value pair used by the generic info list UI and the TXT report writer. */
 data class InfoItem(
     val label: String,
     val reading: Reading<String>
@@ -94,7 +76,6 @@ data class InfoItem(
     }
 }
 
-/** Group of [InfoItem]s, rendered as a titled card and as a report section. */
 data class InfoSection(
     val title: String,
     val items: List<InfoItem>,

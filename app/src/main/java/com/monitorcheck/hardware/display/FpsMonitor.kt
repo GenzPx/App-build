@@ -17,19 +17,6 @@ data class FpsStats(
     val measuring: Boolean
 )
 
-/**
- * FPS measurement via Choreographer frame callbacks.
- *
- * IMPORTANT — measurement scope and honesty:
- * Android gives a normal app no way to read the frame rate of *other* apps or of the
- * system compositor. FrameMetrics and Choreographer only observe the calling app's
- * own window. Monitored Check therefore measures the rendering rate of its own UI,
- * which reflects how fast the display pipeline is currently servicing this app, and
- * the UI states this explicitly. No system-wide or game FPS is claimed or invented.
- *
- * A dropped frame is counted when the gap between two vsync callbacks exceeds 1.5x
- * the display's nominal frame interval.
- */
 class FpsMonitor(private val displayRefreshHz: Float) {
 
     private val _stats = MutableStateFlow(
@@ -59,8 +46,7 @@ class FpsMonitor(private val displayRefreshHz: Float) {
                     frameCount++
                     windowFrames++
                     sumFrameTimeMs += deltaMs
-                    // A gap of more than 1.5 nominal intervals means at least one
-                    // missed vsync — this is a real measured skip, not an estimate.
+
                     if (deltaMs > nominalFrameMs * 1.5) {
                         dropped += ((deltaMs / nominalFrameMs) - 1).toInt().coerceAtLeast(1)
                     }
@@ -120,7 +106,7 @@ class FpsMonitor(private val displayRefreshHz: Float) {
 
     val methodDescription: String = """
         Measured with Choreographer vsync callbacks on this app's own render loop.
-        
+
         Android does not expose the frame rate of other applications or of SurfaceFlinger
         to third-party apps, so this figure describes how quickly the display pipeline is
         currently presenting Monitored Check's own frames. It is a real measurement of

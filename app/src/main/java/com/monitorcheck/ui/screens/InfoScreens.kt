@@ -22,7 +22,6 @@ import com.monitorcheck.ui.components.SectionCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Generic scrollable page rendering a list of [InfoSection]s. */
 @Composable
 fun SectionListScreen(
     sections: List<InfoSection>,
@@ -40,7 +39,7 @@ fun SectionListScreen(
 @Composable
 fun DeviceInfoScreen(contentPadding: PaddingValues) {
     val context = LocalContext.current
-    // Build constants and feature flags are static, so compute once off the main thread.
+
     val sections by produceState(initialValue = emptyList<InfoSection>()) {
         value = withContext(Dispatchers.IO) {
             SystemRepository(context.applicationContext).deviceSections()
@@ -119,7 +118,7 @@ fun DriversScreen(contentPadding: PaddingValues) {
 @Composable
 fun GpuScreen(contentPadding: PaddingValues) {
     val context = LocalContext.current
-    // The EGL/GL query is expensive, so run it off the main thread and cache it.
+
     val sections by produceState(initialValue = emptyList<InfoSection>()) {
         value = withContext(Dispatchers.IO) {
             GpuRepository(context.applicationContext).infoSections()

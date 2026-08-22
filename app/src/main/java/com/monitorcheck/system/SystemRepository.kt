@@ -13,15 +13,8 @@ import com.monitorcheck.core.Reading
 import com.monitorcheck.core.SysFs
 import java.io.File
 
-/**
- * Device, Android build, kernel, SELinux and boot information.
- *
- * Everything here is either a public android.os.Build constant, a system property
- * read through the documented path, or a world-readable proc/sys node.
- */
 class SystemRepository(private val context: Context) {
 
-    /** Reads a system property via reflection on android.os.SystemProperties. */
     fun systemProperty(key: String): String? = try {
         @Suppress("PrivateApi")
         val clazz = Class.forName("android.os.SystemProperties")
@@ -194,7 +187,6 @@ class SystemRepository(private val context: Context) {
         )
     }
 
-    /** SELinux state, read the supported way: the enforce node and the process context. */
     fun selinuxSection(): InfoSection {
         val enforce = SysFs.readFirstLine("/sys/fs/selinux/enforce")
         val state = when (enforce) {
@@ -234,13 +226,6 @@ class SystemRepository(private val context: Context) {
         )
     }
 
-    /**
-     * Root / integrity indicators.
-     *
-     * These are observational checks on world-readable paths. They indicate the
-     * presence of common root tooling; they are not a security guarantee and the UI
-     * says so. The app itself never requests or uses root.
-     */
     fun integritySection(): InfoSection {
         val suPaths = listOf(
             "/system/bin/su", "/system/xbin/su", "/sbin/su", "/su/bin/su",
@@ -270,7 +255,6 @@ class SystemRepository(private val context: Context) {
         )
     }
 
-    /** Binder IPC diagnostics — genuinely restricted on modern Android. */
     fun binderSection(): InfoSection {
         val items = ArrayList<InfoItem>()
         val binderPaths = listOf(
@@ -301,7 +285,6 @@ class SystemRepository(private val context: Context) {
             }))
         }
 
-        // Driver presence is observable even when statistics are not.
         items.add(InfoItem("Binder devices", Reading.available(
             listOf("/dev/binder", "/dev/hwbinder", "/dev/vndbinder")
                 .filter { runCatching { File(it).exists() }.getOrDefault(false) }
@@ -317,7 +300,6 @@ class SystemRepository(private val context: Context) {
         )
     }
 
-    /** Running-process count via the supported ActivityManager APIs. */
     fun processCount(): Reading<Int> {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
             ?: return Reading.unavailable("ActivityManager unavailable")

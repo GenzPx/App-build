@@ -43,10 +43,6 @@ import com.monitorcheck.ui.theme.MonoNumberStyle
 import com.monitorcheck.ui.theme.StatusColors
 import java.util.Locale
 
-/**
- * Sensor explorer. Listeners are registered only for the expanded sensor and are
- * unregistered as soon as it collapses or the screen leaves composition.
- */
 @Composable
 fun SensorScreen(contentPadding: PaddingValues) {
     val context = LocalContext.current
@@ -163,7 +159,6 @@ private fun SensorCard(
     }
 }
 
-/** Registers a listener while composed; unregisters automatically on dispose. */
 @Composable
 private fun LiveSensorValues(info: SensorInfo, repo: SensorRepository) {
     val sensor = remember(info.id) { repo.sensorById(info.id) }

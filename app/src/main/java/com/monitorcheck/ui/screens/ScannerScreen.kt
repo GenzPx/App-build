@@ -204,7 +204,6 @@ private fun FileScanTab(padding: PaddingValues) {
     var manualPath by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf<String?>(null) }
 
-    // SAF picker: the supported way to let the user choose any file to scan.
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -225,7 +224,7 @@ private fun FileScanTab(padding: PaddingValues) {
             if (temp != null && temp.exists()) {
                 status = "Analysing ${temp.name}…"
                 result = scanner.scanFile(temp)
-                // Clean up the working copy immediately after analysis.
+
                 withContext(Dispatchers.IO) { runCatching { temp.delete() } }
             } else {
                 status = "Could not read the selected file."

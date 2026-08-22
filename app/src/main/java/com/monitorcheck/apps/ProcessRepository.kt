@@ -35,20 +35,11 @@ data class ServiceEntry(
     val clientCount: Int
 )
 
-/**
- * Task manager data.
- *
- * Android 8.0 (API 26) deliberately limits getRunningAppProcesses() to the caller's
- * own processes, and /proc is protected by hidepid=2 for other UIDs. This repository
- * gathers everything that IS still legitimately available and reports the platform
- * limitation explicitly instead of pretending to have a full process table.
- */
 class ProcessRepository(private val context: Context) {
 
     private val activityManager =
         context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
 
-    /** True when the OS restricts the process list to our own app. */
     val isRestricted: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
 
     val restrictionNote: String = if (isRestricted) {
@@ -64,7 +55,6 @@ class ProcessRepository(private val context: Context) {
     suspend fun runningProcesses(): List<ProcessEntry> = withContext(Dispatchers.IO) {
         val out = LinkedHashMap<Int, ProcessEntry>()
 
-        // 1. Supported API. On API 26+ this returns only our own processes.
         try {
             activityManager?.runningAppProcesses?.forEach { info ->
                 val pss = try {
@@ -84,9 +74,8 @@ class ProcessRepository(private val context: Context) {
                     isOwnProcess = info.uid == Process.myUid()
                 )
             }
-        } catch (_: Throwable) { /* fall through to /proc enumeration */ }
+        } catch (_: Throwable) {  }
 
-        // 2. /proc enumeration for anything the kernel still lets us stat.
         try {
             File("/proc").listFiles { f -> f.isDirectory && f.name.toIntOrNull() != null }
                 ?.forEach { dir ->
@@ -109,7 +98,7 @@ class ProcessRepository(private val context: Context) {
                         isOwnProcess = pid == Process.myPid()
                     )
                 }
-        } catch (_: Throwable) { /* hidepid blocks this on modern Android */ }
+        } catch (_: Throwable) {  }
 
         out.values.sortedWith(
             compareBy<ProcessEntry> { it.importanceValue }.thenByDescending { it.memoryPssBytes ?: 0 }
@@ -145,10 +134,6 @@ class ProcessRepository(private val context: Context) {
         }
     }
 
-    /**
-     * App-level activity from UsageStatsManager. This is the officially supported
-     * replacement for enumerating other apps' processes, and needs Usage Access.
-     */
     suspend fun recentAppActivity(): Reading<List<Pair<String, Long>>> = withContext(Dispatchers.IO) {
         if (!Permissions.hasUsageStats(context)) {
             return@withContext Reading.permission(
@@ -171,7 +156,6 @@ class ProcessRepository(private val context: Context) {
         }
     }
 
-    /** Foreground app, when Usage Access is granted. */
     suspend fun foregroundApp(): Reading<String> = withContext(Dispatchers.IO) {
         if (!Permissions.hasUsageStats(context)) {
             return@withContext Reading.permission("Requires Usage Access")
@@ -188,11 +172,6 @@ class ProcessRepository(private val context: Context) {
         }
     }
 
-    /**
-     * "Force stop" is a privileged operation. A normal app can only stop its own
-     * background services, so we expose the honest capability and defer to the
-     * system App Info screen for anything else.
-     */
     fun forceStopCapability(packageName: String): Reading<String> = when {
         packageName == context.packageName ->
             Reading.available("Monitored Check can stop its own background service", "Self")

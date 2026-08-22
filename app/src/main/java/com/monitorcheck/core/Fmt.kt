@@ -5,7 +5,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
-/** Formatting helpers shared by the UI and the TXT report writer. */
 object Fmt {
 
     private val tsFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
@@ -16,7 +15,6 @@ object Fmt {
     fun time(millis: Long): String = timeFormat.format(Date(millis))
     fun date(millis: Long): String = dateFormat.format(Date(millis))
 
-    /** Binary (IEC) byte formatting: 1024-based, the convention used for RAM. */
     fun bytes(value: Long): String {
         if (value < 0) return "Unavailable"
         val units = arrayOf("B", "KB", "MB", "GB", "TB", "PB")
@@ -51,7 +49,6 @@ object Fmt {
         return String.format(Locale.US, "%.2f %s", v, units[i])
     }
 
-    /** kHz (the unit used by cpufreq sysfs nodes) to a human readable string. */
     fun freqKHz(khz: Long): String = when {
         khz <= 0 -> "Unavailable"
         khz >= 1_000_000 -> String.format(Locale.US, "%.2f GHz", khz / 1_000_000.0)

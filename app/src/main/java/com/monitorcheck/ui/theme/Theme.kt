@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.monitorcheck.core.ThemeMode
 
-// Brand palette: technical blue + diagnostic teal, matching the launcher icon.
 private val BrandBlue = Color(0xFF1F6FEB)
 private val BrandTeal = Color(0xFF00A98F)
 private val BrandCyan = Color(0xFF5BC8F5)
@@ -62,7 +61,6 @@ private val DarkScheme = darkColorScheme(
     outline = Color(0xFF8E9099)
 )
 
-/** Semantic colours for availability states and gauges, resolved per theme. */
 object StatusColors {
     val ok: Color @Composable get() = if (isDark()) Color(0xFF7CF7C4) else Color(0xFF00875A)
     val warn: Color @Composable get() = if (isDark()) Color(0xFFFFD27A) else Color(0xFFB86E00)
@@ -103,7 +101,6 @@ private val AppTypography = Typography(
     )
 )
 
-/** Monospace style for numeric telemetry, so digits do not jitter as values change. */
 val MonoNumberStyle = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontWeight = FontWeight.Medium,
@@ -122,7 +119,6 @@ fun MonitoredCheckTheme(
         ThemeMode.DARK -> true
     }
 
-    // Material You dynamic colour is only available from Android 12.
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

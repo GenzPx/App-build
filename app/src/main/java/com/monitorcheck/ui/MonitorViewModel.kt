@@ -61,7 +61,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     val series = SeriesStore(capacity = 120)
     private val _seriesVersion = MutableStateFlow(0)
     val seriesVersion: StateFlow<Int> = _seriesVersion.asStateFlow()
-    /** Bounded per-core CPU usage histories for the Live Monitor graphs. */
+
     private val perCoreBuffers = LinkedHashMap<Int, com.monitorcheck.monitor.RingBuffer>()
     private var loopJob: Job? = null
     private var inForeground = true
@@ -73,7 +73,7 @@ class MonitorViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleRunning() = if (_running.value) stop() else start()
     fun setForeground(foreground: Boolean) { inForeground = foreground }
     fun clearSeries() { series.clear(); synchronized(perCoreBuffers) { perCoreBuffers.values.forEach { it.clear() } }; _seriesVersion.value++ }
-    /** Immutable snapshot of the per-core CPU histories, keyed by core id. */
+
     fun perCoreSnapshot(): Map<Int, List<Float>> = synchronized(perCoreBuffers) { perCoreBuffers.mapValues { it.value.toList() } }
 
     private suspend fun loop() {

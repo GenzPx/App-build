@@ -8,12 +8,6 @@ data class GuideEntry(
     val limitation: String? = null
 )
 
-/**
- * Central catalogue of every menu in the app: what it is for, how it really
- * gets its data, and which Android limitation applies. The Guide screen and the
- * pre-open explanation dialogs both read from this single list, so a new menu
- * only needs one entry here to be documented everywhere.
- */
 object GuideCatalog {
     val entries = listOf(
         GuideEntry("dashboard", "Dashboard", "Ringkasan kesehatan perangkat live.", "Semua kartu membaca satu sample bersama dari monitoring engine terpusat. Kartu bisa di-enable/disable dan diurutkan dari Settings."),

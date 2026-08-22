@@ -6,7 +6,6 @@ import com.monitorcheck.hardware.cpu.CpuUsage
 import com.monitorcheck.hardware.memory.MemorySnapshot
 import com.monitorcheck.network.NetworkThroughput
 
-/** One tick of the central monitoring engine. Every field is a real measurement. */
 data class MonitorSample(
     val timestamp: Long,
     val cpu: CpuUsage?,
@@ -20,7 +19,6 @@ data class MonitorSample(
     val cpuTemperatureCelsius: Reading<Double> = Reading.unsupported("CPU thermal zone not sampled")
 )
 
-/** Fixed-size ring buffer for graph series — no unbounded growth on long sessions. */
 class RingBuffer(private val capacity: Int) {
     private val data = FloatArray(capacity)
     private var start = 0
@@ -53,11 +51,9 @@ class RingBuffer(private val capacity: Int) {
     fun clear() { start = 0; count = 0 }
 }
 
-/** Named graph series collected by the engine. */
 enum class Series { CPU, CPU_FREQ, RAM, BATTERY_LEVEL, BATTERY_TEMP, BATTERY_CURRENT,
     DEVICE_TEMP, NET_DOWN, NET_UP, GPU, FPS }
 
-/** Holds all graph histories with bounded memory. */
 class SeriesStore(private val capacity: Int = 120) {
     private val buffers = HashMap<Series, RingBuffer>()
 

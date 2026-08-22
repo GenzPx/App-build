@@ -6,17 +6,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Verifies the arithmetic behind CPU utilisation. The delta formula is the part that
- * must never produce a plausible-but-wrong number, so it is tested directly here
- * without needing an Android device.
- */
 class CpuParsingTest {
 
     private fun times(user: Long, nice: Long, system: Long, idle: Long, iowait: Long = 0) =
         CpuTimes(user, nice, system, idle, iowait, 0, 0, 0)
 
-    /** Mirrors CpuRepository.delta — busy time over total time between two samples. */
     private fun delta(prev: CpuTimes?, cur: CpuTimes?): Double? {
         if (prev == null || cur == null) return null
         val totalDelta = cur.total - prev.total
@@ -40,14 +34,14 @@ class CpuParsingTest {
     @Test
     fun `fully idle interval reports zero percent`() {
         val prev = times(100, 0, 0, 900)
-        val cur = times(100, 0, 0, 1900) // only idle advanced
+        val cur = times(100, 0, 0, 1900)
         assertEquals(0.0, delta(prev, cur)!!, 0.001)
     }
 
     @Test
     fun `fully busy interval reports one hundred percent`() {
         val prev = times(100, 0, 0, 900)
-        val cur = times(1100, 0, 0, 900) // only user advanced
+        val cur = times(1100, 0, 0, 900)
         assertEquals(100.0, delta(prev, cur)!!, 0.001)
     }
 
@@ -72,7 +66,7 @@ class CpuParsingTest {
 
     @Test
     fun `counter rollover cannot produce an out of range value`() {
-        // If a counter resets, the result must still be clamped into 0..100.
+
         val prev = times(1000, 0, 0, 1000)
         val cur = times(10, 0, 0, 3000)
         val result = delta(prev, cur)

@@ -14,10 +14,6 @@ import com.monitorcheck.core.Reading
 import java.util.Locale
 import kotlin.math.sqrt
 
-/**
- * Display characteristics from DisplayManager / WindowManager.
- * All values are queried from the platform; nothing is assumed from the model name.
- */
 class DisplayRepository(private val context: Context) {
 
     private val displayManager =
@@ -27,7 +23,6 @@ class DisplayRepository(private val context: Context) {
         displayManager?.getDisplay(Display.DEFAULT_DISPLAY)
     } catch (_: Throwable) { null }
 
-    /** Physical resolution in pixels, excluding system decorations where possible. */
     fun realSize(): Reading<Pair<Int, Int>> = try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -77,7 +72,7 @@ class DisplayRepository(private val context: Context) {
                     Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL -> "manual"
                     else -> "unknown mode"
                 }
-                // The scale is device-dependent (usually 0-255) so we show the raw value.
+
                 Reading.available("$value (raw, $modeLabel)", "Settings.System.SCREEN_BRIGHTNESS")
             }
         }
@@ -166,8 +161,7 @@ class DisplayRepository(private val context: Context) {
                 Fmt.yesNo(d?.isWideColorGamut == true), "Display.isWideColorGamut")))
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // isWideColorGamut / the window colour mode are the only public colour
-            // surface; Display.getSupportedColorModes() is a hidden API and is not used.
+
             capabilities.add(InfoItem("Colour mode support", Reading.available(
                 if (d?.isWideColorGamut == true) "Wide colour gamut capable" else "Standard (sRGB)",
                 "Display.isWideColorGamut")))

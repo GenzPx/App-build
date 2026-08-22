@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteOpenHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** One persisted battery sample. All fields are real measurements; nulls mean "not reported". */
 data class BatteryHistoryEntry(
     val timestamp: Long,
     val levelPercent: Int,
@@ -17,7 +16,6 @@ data class BatteryHistoryEntry(
     val charging: Boolean
 )
 
-/** Selectable history ranges for the battery graphs. */
 enum class HistoryRange(val label: String, val millis: Long) {
     H1("1 hour", 3_600_000L),
     H6("6 hours", 21_600_000L),
@@ -26,13 +24,6 @@ enum class HistoryRange(val label: String, val millis: Long) {
     D30("30 days", 2_592_000_000L)
 }
 
-/**
- * Local-only battery history.
- *
- * Uses plain SQLite (no extra dependency, tiny footprint). Samples are written at
- * most once per minute and pruned to 30 days so the database stays small on low-end
- * devices. Nothing ever leaves the device.
- */
 class BatteryHistoryStore(context: Context) {
 
     private class Helper(context: Context) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
@@ -63,9 +54,6 @@ class BatteryHistoryStore(context: Context) {
     @Volatile
     private var lastWriteMs = 0L
 
-    /**
-     * Records a sample, rate-limited to [MIN_WRITE_INTERVAL_MS]. Returns true if written.
-     */
     suspend fun record(snapshot: BatterySnapshot, force: Boolean = false): Boolean =
         withContext(Dispatchers.IO) {
             val now = snapshot.timestamp
@@ -112,7 +100,7 @@ class BatteryHistoryStore(context: Context) {
                 }
             }
         } catch (_: Throwable) {
-            // Return whatever was collected; the UI shows an empty-history message.
+
         }
         out
     }
@@ -125,7 +113,6 @@ class BatteryHistoryStore(context: Context) {
         } catch (_: Throwable) { 0 }
     }
 
-    /** Deletes samples older than 30 days. Called periodically by the engine. */
     suspend fun prune() = withContext(Dispatchers.IO) {
         try {
             val cutoff = System.currentTimeMillis() - HistoryRange.D30.millis

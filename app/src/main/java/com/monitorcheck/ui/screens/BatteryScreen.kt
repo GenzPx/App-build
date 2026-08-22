@@ -46,7 +46,6 @@ fun BatteryScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     var history by remember { mutableStateOf<List<BatteryHistoryEntry>>(emptyList()) }
     var historyCount by remember { mutableStateOf(0) }
 
-    // Reload persisted history whenever the range changes or a new sample lands.
     LaunchedEffect(range, sample?.battery?.value?.levelPercent) {
         history = vm.historyStore.query(range)
         historyCount = vm.historyStore.count()

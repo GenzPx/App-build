@@ -4,14 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Thermal zone nodes report temperature in milli-, deci- or plain Celsius depending
- * on the vendor. This verifies the normalisation logic keeps every scale within a
- * physically sensible range instead of showing values like "45000 °C".
- */
 class ThermalNormalisationTest {
 
-    /** Mirrors ThermalRepository.normalise. */
     private fun normalise(raw: Long): Double = when {
         raw > 10_000 -> raw / 1000.0
         raw > 1_000 -> raw / 100.0
@@ -52,7 +46,7 @@ class ThermalNormalisationTest {
 
     @Test
     fun `values outside the sane band would be rejected by the repository filter`() {
-        // The repository discards anything outside -40..200 after normalising.
+
         val bogus = normalise(999_999_999)
         assertTrue("bogus reading should fall outside the accepted band", bogus > 200.0)
     }

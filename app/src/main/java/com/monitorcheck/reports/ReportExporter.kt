@@ -23,13 +23,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * Builds the full plain-text diagnostic report.
- *
- * The writer only prints what the repositories actually returned. Any value the
- * platform withheld is written as its real status ("Unavailable", "Restricted by
- * Android", ...), never as a plausible-looking number.
- */
 class ReportExporter(private val context: Context) {
 
     private val width = 78
@@ -52,7 +45,7 @@ class ReportExporter(private val context: Context) {
         onProgress("CPU")
         val cpu = CpuRepository()
         cpu.staticInfo().forEach { section(sb, it) }
-        // Two samples are required for a real utilisation delta.
+
         cpu.sampleUsage()
         delay(1000)
         cpuRuntime(sb, cpu)
@@ -343,7 +336,6 @@ class ReportExporter(private val context: Context) {
                 "samples over time; open the Network monitor for live throughput.", indent = "  "))
     }
 
-    /** Writes the report into app-private storage and returns the file. */
     suspend fun writeToFile(content: String): File = withContext(Dispatchers.IO) {
         val dir = File(context.filesDir, "reports").apply { mkdirs() }
         val name = "MonitoredCheck_report_${
@@ -355,7 +347,6 @@ class ReportExporter(private val context: Context) {
         file
     }
 
-    /** Content URI for sharing, exposed through the app's FileProvider. */
     fun shareUri(file: File) = FileProvider.getUriForFile(
         context, "${context.packageName}.fileprovider", file
     )

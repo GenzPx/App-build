@@ -21,14 +21,6 @@ data class CrashReport(
     val device: String
 )
 
-/**
- * Local crash capture for Monitored Check itself.
- *
- * Installs an UncaughtExceptionHandler that writes a report to app-private storage
- * and then delegates to the previous handler so the system still records the crash
- * normally. Reports NEVER leave the device — there is no upload path in this class,
- * by design. Sharing is a manual, user-initiated action from the UI.
- */
 class CrashReporter(private val context: Context) {
 
     private val dir: File by lazy { File(context.filesDir, "crash").apply { mkdirs() } }
@@ -37,7 +29,7 @@ class CrashReporter(private val context: Context) {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             runCatching { write(thread, throwable) }
-            // Always let the platform handler run so behaviour stays standard.
+
             previous?.uncaughtException(thread, throwable)
         }
     }
@@ -75,7 +67,6 @@ class CrashReporter(private val context: Context) {
         pruneOldReports()
     }
 
-    /** Keeps the newest 20 reports so crash logs can never fill up storage. */
     private fun pruneOldReports() {
         runCatching {
             dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(20)
@@ -129,7 +120,6 @@ class CrashReporter(private val context: Context) {
 
     fun fileFor(fileName: String): File = File(dir, fileName)
 
-    /** Deliberately throws, so the user can verify crash capture actually works. */
     fun triggerTestCrash() {
         throw IllegalStateException(
             "Monitored Check test crash — triggered intentionally from Settings to verify " +

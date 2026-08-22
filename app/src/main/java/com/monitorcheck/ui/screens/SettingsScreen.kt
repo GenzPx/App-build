@@ -60,7 +60,6 @@ fun SettingsScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val scope = rememberCoroutineScope()
     var notificationDenied by remember { mutableStateOf(false) }
 
-    // POST_NOTIFICATIONS is required from Android 13 for the ongoing service notification.
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -231,7 +230,7 @@ fun SettingsScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                 )
                 Spacer(Modifier.height(10.dp))
                 val enabledIds = settings.dashboardWidgets
-                // Enabled widgets first (in user order), then the disabled ones.
+
                 val ordered = enabledIds.mapNotNull { DashboardWidget.fromId(it) } +
                     DashboardWidget.entries.filter { it.id !in enabledIds }
 

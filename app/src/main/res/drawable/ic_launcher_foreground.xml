@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Monitored Check adaptive icon foreground.
-  A monitoring pulse/waveform crossing a rounded gauge frame, with a check accent —
-  "monitored" + "check". All artwork sits inside the 66dp safe zone so no launcher
-  mask (circle, squircle, rounded square) clips meaningful detail.
--->
+
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Gauge frame -->
     <path
         android:pathData="M32,30 h44 a10,10 0 0 1 10,10 v28 a10,10 0 0 1 -10,10 h-44 a10,10 0 0 1 -10,-10 v-28 a10,10 0 0 1 10,-10 z"
         android:strokeColor="#FF5BC8F5"
@@ -19,7 +13,6 @@
         android:fillColor="#1F5BC8F5"
         android:strokeLineJoin="round" />
 
-    <!-- Live monitoring waveform (ECG-style heartbeat = realtime telemetry) -->
     <path
         android:pathData="M29,58 L41,58 L47,44 L55,70 L62,54 L68,54"
         android:strokeColor="#FF7CF7C4"
@@ -27,7 +20,6 @@
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
 
-    <!-- Check accent -->
     <path
         android:pathData="M67,57 L73,64 L85,48"
         android:strokeColor="#FFFFFFFF"
@@ -35,7 +27,6 @@
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
 
-    <!-- Status dot -->
     <path
         android:pathData="M30,38 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"
         android:fillColor="#FF7CF7C4" />

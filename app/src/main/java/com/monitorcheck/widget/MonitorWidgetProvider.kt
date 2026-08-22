@@ -22,7 +22,7 @@ class MonitorWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val PREFS="monitor_widget_snapshot"; private const val CPU="cpu"; private const val RAM="ram"; private const val BATTERY="battery"; private const val TEMP="temperature"; private const val NETWORK="network"; private const val UPDATED="updated"
         fun updateAll(context:Context,snapshot:WidgetSnapshot){ context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString(CPU,snapshot.cpu).putString(RAM,snapshot.ram).putString(BATTERY,snapshot.battery).putString(TEMP,snapshot.temperature).putString(NETWORK,snapshot.network).putLong(UPDATED,snapshot.updatedAt).apply(); val m=AppWidgetManager.getInstance(context); val c=ComponentName(context,MonitorWidgetProvider::class.java); m.getAppWidgetIds(c).forEach { updateWidget(context,m,it,null) } }
-        /** Last stored snapshot — used by the alarm refresher to decide what is still fresh. */
+
         fun peek(context:Context):WidgetSnapshot = snap(context)
         private fun snap(context:Context):WidgetSnapshot { val p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE); return WidgetSnapshot(p.getString(CPU,"Unavailable")!!,p.getString(RAM,"Unavailable")!!,p.getString(BATTERY,"Unavailable")!!,p.getString(TEMP,"Unavailable")!!,p.getString(NETWORK,"Unavailable")!!,p.getLong(UPDATED,0L)) }
 

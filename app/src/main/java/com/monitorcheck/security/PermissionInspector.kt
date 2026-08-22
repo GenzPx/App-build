@@ -45,20 +45,10 @@ data class AppPermissionSummary(
         get() = granted.count { it.protectionLevel.contains("dangerous", true) }
 }
 
-/**
- * Permission Inspector.
- *
- * Reports which permissions each installed app requests and whether the platform
- * currently reports them as granted. Android does NOT expose per-app permission
- * *usage history* to third-party apps (the Privacy Dashboard is a system component),
- * so this inspector reports current state only and says so — it never invents a
- * usage timeline.
- */
 class PermissionInspector(private val context: Context) {
 
     private val pm = context.packageManager
 
-    /** Grouping of the standard runtime permissions. */
     private fun groupOf(permission: String): PermissionGroupKind = when {
         permission.contains("CAMERA") -> PermissionGroupKind.CAMERA
         permission.contains("RECORD_AUDIO") || permission.contains("MICROPHONE") ->
@@ -113,11 +103,10 @@ class PermissionInspector(private val context: Context) {
     }
 
     private fun permissionInfo(name: String): PermissionInfo? = try {
-        // getPermissionInfo(String, int) is not deprecated and works on all supported levels.
+
         pm.getPermissionInfo(name, 0)
     } catch (_: Throwable) { null }
 
-    /** Per-app permission states across every installed package. */
     suspend fun inspectAll(): List<AppPermissionSummary> = withContext(Dispatchers.IO) {
         val packages = try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -161,11 +150,9 @@ class PermissionInspector(private val context: Context) {
         }.sortedByDescending { it.sensitiveGrantedCount }
     }
 
-    /** Which apps hold a given permission right now. */
     suspend fun appsHolding(permission: String): List<AppPermissionSummary> =
         inspectAll().filter { s -> s.granted.any { it.permission == permission } }
 
-    /** Grouped view: how many apps currently hold each sensitive permission. */
     suspend fun groupSummary(): Map<PermissionGroupKind, List<Pair<String, Int>>> =
         withContext(Dispatchers.IO) {
             val all = inspectAll()
@@ -179,7 +166,6 @@ class PermissionInspector(private val context: Context) {
             byGroup.mapValues { (_, v) -> v.entries.sortedByDescending { it.value }.map { it.key to it.value } }
         }
 
-    /** Permission state for Monitored Check itself. */
     fun ownPermissions(): List<PermissionState> = try {
         val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getPackageInfo(context.packageName,
@@ -207,12 +193,6 @@ class PermissionInspector(private val context: Context) {
         emptyList()
     }
 
-    /**
-     * Permission usage history availability.
-     *
-     * Android 12+ has a Privacy Dashboard, but PermissionUsage APIs are system-only.
-     * We say so plainly rather than fabricating a history.
-     */
     fun usageHistoryAvailability(): Reading<String> = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> Reading.restricted(
             "Android 12+ records permission usage in the system Privacy Dashboard, but the " +
@@ -224,7 +204,6 @@ class PermissionInspector(private val context: Context) {
         )
     }
 
-    /** Intent to the system privacy dashboard, when the OS provides one. */
     fun privacyDashboardIntent(): android.content.Intent? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             android.content.Intent(android.provider.Settings.ACTION_PRIVACY_SETTINGS)

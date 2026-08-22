@@ -22,7 +22,6 @@ enum class RiskLevel(val label: String, val rank: Int) {
     UNKNOWN("Unknown", -1)
 }
 
-/** A single reason contributing to the risk score, always shown to the user. */
 data class Finding(
     val title: String,
     val detail: String,
@@ -43,28 +42,10 @@ data class ScanResult(
     val error: String? = null
 )
 
-/**
- * Pattern Scanner — a local, transparent, heuristic inspector.
- *
- * THIS IS NOT AN ANTIVIRUS. It does not detect malware by name, has no cloud
- * reputation service, and cannot guarantee a file is safe or unsafe. What it does:
- *
- *  - computes real cryptographic hashes (SHA-256, MD5) of the chosen file
- *  - parses real APK metadata through PackageManager
- *  - flags genuinely dangerous permission combinations
- *  - flags real structural indicators (native libs, dynamic code loading, hidden
- *    executables inside archives, test-key signing, debuggable flags)
- *  - explains every single point of the score
- *
- * Everything runs on-device. Nothing is uploaded, ever.
- */
 class PatternScanner(private val context: Context) {
 
     companion object {
-        /**
-         * Permissions that meaningfully raise risk when an app requests them.
-         * Weights reflect how much abuse potential each one carries in combination.
-         */
+
         private val DANGEROUS_PERMISSIONS = mapOf(
             "android.permission.SEND_SMS" to 12,
             "android.permission.RECEIVE_SMS" to 10,
@@ -89,7 +70,6 @@ class PatternScanner(private val context: Context) {
             "android.permission.QUERY_ALL_PACKAGES" to 4
         )
 
-        /** Byte/string patterns that indicate risky runtime behaviour. */
         private val CODE_PATTERNS = listOf(
             Triple("DexClassLoader", "Dynamic code loading (DexClassLoader)",
                 "The app can load and execute code that is not present in the APK at install time."),
@@ -115,7 +95,6 @@ class PatternScanner(private val context: Context) {
         )
     }
 
-    /** Scans an arbitrary file. APKs get full package analysis; others get hashing + type checks. */
     suspend fun scanFile(file: File): ScanResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         if (!file.exists() || !file.canRead()) {
@@ -149,7 +128,7 @@ class PatternScanner(private val context: Context) {
             findings.addAll(apkFindings)
             score += apkFindings.sumOf { it.weight }
         } else {
-            // Non-APK: check for executable content and archive contents.
+
             if (isZip(file)) {
                 metadata.add("Container" to "ZIP-based archive")
                 val zipFindings = analyzeArchive(file)
@@ -189,7 +168,6 @@ class PatternScanner(private val context: Context) {
         )
     }
 
-    /** Inspects an installed package using PackageManager metadata. */
     suspend fun scanInstalledPackage(packageName: String): ScanResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         val pm = context.packageManager
@@ -223,7 +201,6 @@ class PatternScanner(private val context: Context) {
 
             val isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0
 
-            // Permission analysis on the genuinely requested + granted permissions.
             val requested = info.requestedPermissions?.toList().orEmpty()
             val grantedFlags = info.requestedPermissionsFlags
             val granted = requested.filterIndexed { i, _ ->
@@ -235,7 +212,7 @@ class PatternScanner(private val context: Context) {
             for (p in risky) {
                 val weight = DANGEROUS_PERMISSIONS[p] ?: 0
                 val isGranted = p in granted
-                // Only granted permissions carry full weight; requested-but-denied is milder.
+
                 val effective = if (isGranted) weight else weight / 3
                 score += effective
                 findings.add(Finding(
@@ -283,7 +260,6 @@ class PatternScanner(private val context: Context) {
                         "vendor and are not user-removable.", 0))
             }
 
-            // Structural analysis of the actual APK file on disk.
             if (apk.canRead()) {
                 val archiveFindings = analyzeArchive(apk)
                 findings.addAll(archiveFindings)
@@ -357,7 +333,6 @@ class PatternScanner(private val context: Context) {
         return findings
     }
 
-    /** Looks inside a ZIP/APK for structural indicators. Read-only. */
     private fun analyzeArchive(file: File): List<Finding> {
         val findings = ArrayList<Finding>()
         try {
@@ -400,7 +375,6 @@ class PatternScanner(private val context: Context) {
                             "escape static review: ${hiddenExec.take(3).joinToString(", ")}", 11))
                 }
 
-                // Scan the primary DEX for behavioural strings.
                 zip.getEntry("classes.dex")?.let { entry ->
                     if (entry.size in 1..(40 * 1024 * 1024)) {
                         val content = zip.getInputStream(entry).use { input ->
@@ -439,7 +413,6 @@ class PatternScanner(private val context: Context) {
         return findings
     }
 
-    /** Real SHA-256 / MD5 of the file contents, streamed so large files are safe. */
     fun hashFile(file: File, algorithm: String): String? = try {
         val md = MessageDigest.getInstance(algorithm)
         file.inputStream().use { input ->
@@ -455,7 +428,6 @@ class PatternScanner(private val context: Context) {
         null
     }
 
-    /** Scans every readable file in a directory tree. Cancellable. */
     suspend fun scanFolder(
         dir: File,
         maxFiles: Int = 300,
@@ -475,7 +447,7 @@ class PatternScanner(private val context: Context) {
                 if (child.isDirectory) {
                     stack.add(child)
                 } else {
-                    // Only scan file types where the heuristics are meaningful.
+
                     val ext = child.extension.lowercase()
                     if (ext in setOf("apk", "xapk", "apks", "dex", "jar", "so", "zip", "bin", "sh")) {
                         count++
@@ -514,7 +486,6 @@ class PatternScanner(private val context: Context) {
         System.currentTimeMillis() - start, error = message
     )
 
-    /** Maps the accumulated weight to a level. Thresholds are documented in the UI. */
     fun levelFor(score: Int): RiskLevel = when {
         score <= 0 -> RiskLevel.SAFE
         score < 15 -> RiskLevel.LOW

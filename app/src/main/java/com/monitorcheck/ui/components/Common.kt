@@ -48,7 +48,6 @@ import com.monitorcheck.ui.theme.StatusColors
 import kotlin.math.max
 import kotlin.math.min
 
-/** Colour coding for availability states. */
 @Composable
 fun statusColor(status: DataStatus): Color = when (status) {
     DataStatus.AVAILABLE -> MaterialTheme.colorScheme.onSurface
@@ -61,7 +60,6 @@ fun statusColor(status: DataStatus): Color = when (status) {
     else -> StatusColors.muted
 }
 
-/** Small pill showing a non-available status. */
 @Composable
 fun StatusChip(status: DataStatus, modifier: Modifier = Modifier) {
     val color = statusColor(status)
@@ -79,7 +77,6 @@ fun StatusChip(status: DataStatus, modifier: Modifier = Modifier) {
     }
 }
 
-/** Renders a label/value row, colouring and annotating unavailable values. */
 @Composable
 fun InfoRow(item: InfoItem, showSource: Boolean = false) {
     val r = item.reading
@@ -109,7 +106,7 @@ fun InfoRow(item: InfoItem, showSource: Boolean = false) {
                 }
             }
         }
-        // Explain limitations inline so the user always knows why a value is missing.
+
         val note = r.note
         if (!note.isNullOrBlank() && (!r.isAvailable || r.status == DataStatus.LIMITED)) {
             Text(
@@ -130,7 +127,6 @@ fun InfoRow(item: InfoItem, showSource: Boolean = false) {
     }
 }
 
-/** A titled card containing a list of info rows. */
 @Composable
 fun SectionCard(
     section: InfoSection,
@@ -171,12 +167,6 @@ fun SectionCard(
     }
 }
 
-/**
- * Lightweight line chart.
- *
- * Deliberately drawn with a single Path on Canvas — no chart library, no per-point
- * composables — so it stays cheap on low-end devices at 1s refresh rates.
- */
 @Composable
 fun Sparkline(
     values: List<Float>,
@@ -194,7 +184,6 @@ fun Sparkline(
         val hi = maxValue ?: values.max()
         val range = if (hi - lo < 0.0001f) 1f else hi - lo
 
-        // Horizontal guide lines at 25/50/75%.
         for (f in listOf(0.25f, 0.5f, 0.75f)) {
             val y = size.height * f
             drawLine(surfaceVariant, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
@@ -230,7 +219,6 @@ fun Sparkline(
     }
 }
 
-/** Horizontal usage bar with animated fill. */
 @Composable
 fun UsageBar(
     fraction: Float,
@@ -260,7 +248,6 @@ fun UsageBar(
     }
 }
 
-/** Colour that shifts from ok -> warn -> critical as a load value rises. */
 @Composable
 fun loadColor(percent: Double): Color {
     val target = when {
@@ -272,7 +259,6 @@ fun loadColor(percent: Double): Color {
     return animated
 }
 
-/** Big numeric readout used on dashboard cards. */
 @Composable
 fun MetricValue(
     value: String,
@@ -297,7 +283,6 @@ fun MetricValue(
     }
 }
 
-/** Full-card state for a metric the platform will not provide. */
 @Composable
 fun UnavailableBlock(reading: Reading<*>, modifier: Modifier = Modifier) {
     Column(modifier.padding(vertical = 4.dp)) {
@@ -313,7 +298,6 @@ fun UnavailableBlock(reading: Reading<*>, modifier: Modifier = Modifier) {
     }
 }
 
-/** Empty-state / explanation panel. */
 @Composable
 fun NoticeCard(
     title: String,
@@ -343,7 +327,6 @@ fun NoticeCard(
     }
 }
 
-/** Monospace key/value line for dense technical listings. */
 @Composable
 fun MonoRow(label: String, value: String, valueColor: Color? = null) {
     Row(
@@ -363,7 +346,6 @@ fun MonoRow(label: String, value: String, valueColor: Color? = null) {
     }
 }
 
-/** Section heading used inside scrollable detail pages. */
 @Composable
 fun ScreenHeader(title: String, subtitle: String? = null) {
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
@@ -378,7 +360,6 @@ fun ScreenHeader(title: String, subtitle: String? = null) {
     }
 }
 
-/** Compact stat used in grids of small numbers. */
 @Composable
 fun StatTile(
     label: String,

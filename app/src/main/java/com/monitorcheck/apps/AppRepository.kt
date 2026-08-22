@@ -49,14 +49,6 @@ enum class AppSort(val label: String) {
     UPDATE_DATE("Update date"), LAST_USED("Last used"), TARGET_SDK("Target SDK")
 }
 
-/**
- * Installed application inventory.
- *
- * Uses PackageManager for the base list. Per-app storage sizes need the
- * StorageStatsManager API which requires the user-granted Usage Access special
- * permission — without it, sizes are reported as Permission Required rather than
- * being estimated.
- */
 class AppRepository(private val context: Context) {
 
     private val pm: PackageManager = context.packageManager
@@ -96,7 +88,7 @@ class AppRepository(private val context: Context) {
                             appSize = stats.appBytes
                             dataSize = stats.dataBytes
                             cacheSize = stats.cacheBytes
-                        } catch (_: Throwable) { /* per-app failure stays null */ }
+                        } catch (_: Throwable) {  }
                     }
 
                     AppEntry(
@@ -129,7 +121,6 @@ class AppRepository(private val context: Context) {
             }
         }
 
-    /** Last-used timestamps from UsageStatsManager (needs Usage Access). */
     private fun loadLastUsed(): Map<String, Long> = try {
         val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val end = System.currentTimeMillis()
@@ -184,7 +175,6 @@ class AppRepository(private val context: Context) {
         }
     }
 
-    /** Opens the system App Info screen — the supported way to reach app controls. */
     fun appInfoIntent(packageName: String) = android.content.Intent(
         android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
         android.net.Uri.fromParts("package", packageName, null)
@@ -192,7 +182,6 @@ class AppRepository(private val context: Context) {
 
     fun launchIntent(packageName: String) = pm.getLaunchIntentForPackage(packageName)
 
-    /** Runtime permissions actually granted to a package, per PackageManager. */
     suspend fun permissionStates(packageName: String): List<Pair<String, String>> =
         withContext(Dispatchers.IO) {
             try {

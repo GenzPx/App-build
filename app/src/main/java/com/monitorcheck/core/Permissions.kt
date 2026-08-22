@@ -8,18 +8,11 @@ import android.os.Process
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 
-/**
- * Centralised runtime permission / special-access checks.
- *
- * Monitored Check requests nothing at first launch. Each feature asks only for what
- * it needs, right before it needs it, and degrades gracefully when denied.
- */
 object Permissions {
 
     fun has(context: Context, permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
-    /** Usage Access: required for per-app usage stats and app storage sizes. */
     fun hasUsageStats(context: Context): Boolean = try {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -37,7 +30,6 @@ object Permissions {
         false
     }
 
-    /** All-files access (API 30+) used by the optional deep storage analyzer. */
     fun hasAllFilesAccess(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && android.os.Environment.isExternalStorageManager()
 

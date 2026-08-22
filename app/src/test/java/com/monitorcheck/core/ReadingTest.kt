@@ -6,10 +6,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The Reading type is the mechanism that enforces the "never fake data" rule, so it
- * gets thorough coverage: a non-available Reading must never expose a value.
- */
 class ReadingTest {
 
     @Test

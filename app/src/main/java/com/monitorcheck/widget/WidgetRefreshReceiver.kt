@@ -13,23 +13,11 @@ import android.os.BatteryManager
 import android.os.SystemClock
 import com.monitorcheck.core.Fmt
 
-/**
- * Keeps home-screen widgets fresh even when the in-app monitoring engine is not
- * running, using an inexact repeating alarm (battery friendly — the OS batches it).
- *
- * Honesty rules:
- *  - Battery level, battery temperature and RAM are re-read from real sources on
- *    every alarm tick (sticky battery broadcast + ActivityManager). Cheap and real.
- *  - CPU and network need the delta-sampling engine. When the engine has not
- *    produced a sample recently they are shown as "Monitor off", never a stale
- *    number presented as fresh.
- */
 object WidgetRefreshScheduler {
 
     private const val REQUEST_CODE = 4201
     const val ACTION_REFRESH = "com.monitorcheck.action.WIDGET_REFRESH"
 
-    /** Inexact 15-minute cadence; the OS may batch it with other alarms. */
     private const val INTERVAL_MS = AlarmManager.INTERVAL_FIFTEEN_MINUTES
 
     private fun pendingIntent(context: Context): PendingIntent {
@@ -81,7 +69,6 @@ class WidgetRefreshReceiver : BroadcastReceiver() {
         val previous = MonitorWidgetProvider.peek(context)
         val now = System.currentTimeMillis()
 
-        // Real, cheap reads that work without the engine:
         val batteryIntent = runCatching {
             context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         }.getOrNull()
@@ -103,7 +90,6 @@ class WidgetRefreshReceiver : BroadcastReceiver() {
             else null
         }.getOrNull() ?: previous.ram
 
-        // CPU and network require the sampling engine; be honest when it is off.
         val engineFresh = previous.updatedAt > 0 && (now - previous.updatedAt) < 10 * 60_000L
         val cpu = if (engineFresh) previous.cpu else "Monitor off"
         val network = if (engineFresh) previous.network else "Open app for live network speed"

@@ -13,14 +13,6 @@ import com.monitorcheck.core.Reading
 import com.monitorcheck.core.SysFs
 import java.io.File
 
-/**
- * Driver / hardware subsystem information.
- *
- * Android exposes no driver enumeration API. What an unprivileged app *can* see is:
- * the HAL-level capabilities each subsystem reports through its framework API, plus
- * whatever /sys and /proc nodes the kernel leaves world-readable. Both are used here,
- * and the gap is stated explicitly rather than filled with invented entries.
- */
 class DriverRepository(private val context: Context) {
 
     private val systemRepo = SystemRepository(context)
@@ -253,7 +245,7 @@ class DriverRepository(private val context: Context) {
         val devices = SysFs.readText("/proc/bus/input/devices", false)
         val items = ArrayList<InfoItem>()
         if (devices != null) {
-            // Parse the "N: Name=..." blocks the kernel exports.
+
             val names = Regex("N: Name=\"([^\"]+)\"").findAll(devices).map { it.groupValues[1] }.toList()
             items.add(InfoItem("Input devices (${names.size})", if (names.isEmpty())
                 Reading.unavailable() else Reading.available(names.joinToString("\n"),

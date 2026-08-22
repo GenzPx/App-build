@@ -37,7 +37,7 @@ import com.monitorcheck.ui.theme.StatusColors
 fun CpuScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
     val version by vm.seriesVersion.collectAsStateWithLifecycle()
-    // Static CPU description is read once; it does not change at runtime.
+
     val staticSections = remember { vm.cpuRepo.staticInfo() }
 
     LazyColumn(contentPadding = contentPadding) {
@@ -194,7 +194,6 @@ fun CpuScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     }
 }
 
-/** Small helper so LazyListScope.items(count) reads naturally above. */
 private inline fun androidx.compose.foundation.lazy.LazyListScope.items(
     count: Int,
     crossinline itemContent: @Composable (Int) -> Unit

@@ -37,12 +37,6 @@ import com.monitorcheck.ui.components.Sparkline
 import com.monitorcheck.ui.theme.StatusColors
 import java.util.Locale
 
-/**
- * FPS + display page.
- *
- * Measurement starts when the screen is opened and stops the moment it leaves
- * composition, so no Choreographer callback keeps running in the background.
- */
 @Composable
 fun FpsScreen(contentPadding: PaddingValues) {
     val context = LocalContext.current

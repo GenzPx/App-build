@@ -3,16 +3,6 @@ package com.monitorcheck.core
 import java.io.File
 import java.io.RandomAccessFile
 
-/**
- * Safe reader for kernel-exported pseudo files (procfs / sysfs).
- *
- * All access is plain unprivileged file IO through the standard Java APIs. No root,
- * no shell escalation, no security bypass: if SELinux or file permissions deny the
- * read we simply report the value as unavailable/restricted.
- *
- * Paths that fail are remembered so the polling loop does not keep hammering
- * unreadable nodes every tick (important for low-end devices).
- */
 object SysFs {
 
     private val failed = java.util.Collections.synchronizedSet(HashSet<String>())
@@ -24,7 +14,6 @@ object SysFs {
         false
     }
 
-    /** Reads a whole pseudo file, trimmed. Returns null when not readable. */
     fun readText(path: String, useFailureCache: Boolean = true): String? {
         if (useFailureCache && failed.contains(path)) return null
         return try {
@@ -33,7 +22,7 @@ object SysFs {
                 if (useFailureCache) failed.add(path)
                 return null
             }
-            // Pseudo files report length 0, so read the stream rather than allocating by size.
+
             f.bufferedReader().use { it.readText() }.trim().ifEmpty { null }
         } catch (_: Throwable) {
             if (useFailureCache) failed.add(path)
@@ -41,10 +30,6 @@ object SysFs {
         }
     }
 
-    /**
-     * Reads a small numeric sysfs node with a reusable RandomAccessFile-style read.
-     * Used on hot paths (per-core frequency) to reduce allocation churn.
-     */
     fun readFirstLine(path: String): String? {
         if (failed.contains(path)) return null
         return try {
@@ -71,6 +56,5 @@ object SysFs {
         emptyList()
     }
 
-    /** Clears the negative cache; used when the user manually refreshes a page. */
     fun resetFailureCache() = failed.clear()
 }

@@ -29,7 +29,7 @@ data class SensorInfo(
     val stringType: String?,
     val maxEventCount: Int
 ) {
-    /** Maximum sampling rate implied by minDelay, in Hz. */
+
     val maxRateHz: Double? get() = if (minDelayUs > 0) 1_000_000.0 / minDelayUs else null
 }
 
@@ -46,13 +46,6 @@ data class SensorReading(
         values.contentHashCode() * 31 + accuracy * 31 + timestampNanos.hashCode()
 }
 
-/**
- * Sensor discovery and live values.
- *
- * Listeners are registered only while a sensor detail screen is visible and are
- * always unregistered in awaitClose — no sensor is left running in the background,
- * which matters a lot for battery on low-end devices.
- */
 class SensorRepository(context: Context) {
 
     private val sensorManager =
@@ -77,10 +70,6 @@ class SensorRepository(context: Context) {
         sensorManager?.getSensorList(Sensor.TYPE_ALL)?.firstOrNull { it.hashCode() == id }
     } catch (_: Throwable) { null }
 
-    /**
-     * Live values for one sensor as a cold Flow. Registration happens on collect and
-     * is torn down on cancellation.
-     */
     fun observe(sensor: Sensor, samplingUs: Int = SensorManager.SENSOR_DELAY_UI): Flow<SensorReading> =
         callbackFlow {
             val sm = sensorManager
@@ -89,7 +78,7 @@ class SensorRepository(context: Context) {
                 override fun onSensorChanged(event: SensorEvent) {
                     trySend(SensorReading(event.values.copyOf(), event.accuracy, event.timestamp))
                 }
-                override fun onAccuracyChanged(s: Sensor?, accuracy: Int) { /* delivered with values */ }
+                override fun onAccuracyChanged(s: Sensor?, accuracy: Int) {  }
             }
             val registered = try {
                 sm.registerListener(listener, sensor, samplingUs)
@@ -98,7 +87,6 @@ class SensorRepository(context: Context) {
             awaitClose { runCatching { sm.unregisterListener(listener) } }
         }
 
-    /** Ambient temperature / pressure / humidity when the device actually has them. */
     fun environmentSensors(): Map<String, Sensor?> = mapOf(
         "Ambient temperature" to defaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE),
         "Relative humidity" to defaultSensor(Sensor.TYPE_RELATIVE_HUMIDITY),
@@ -144,7 +132,6 @@ class SensorRepository(context: Context) {
             else -> "Unknown"
         }
 
-        /** Units for the common sensor types, so live values are meaningful. */
         fun unitFor(type: Int): String = when (type) {
             Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_LINEAR_ACCELERATION,
             Sensor.TYPE_GRAVITY -> "m/s²"

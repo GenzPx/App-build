@@ -37,13 +37,6 @@ import com.monitorcheck.ui.components.UsageBar
 import com.monitorcheck.ui.components.loadColor
 import com.monitorcheck.ui.theme.StatusColors
 
-/**
- * Material You dashboard.
- *
- * Cards are rendered in the user's configured order and only for enabled widgets.
- * Every card reads from the shared [MonitorViewModel] sample — no card starts its own
- * polling — and tapping one opens the matching detail screen.
- */
 @Composable
 fun DashboardScreen(
     vm: MonitorViewModel,
@@ -156,7 +149,7 @@ private fun CpuUsageCard(
             Spacer(Modifier.height(6.dp))
             UsageBar(fraction = (pct / 100.0).toFloat(), color = loadColor(pct))
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.CPU),
@@ -208,7 +201,7 @@ private fun CpuFreqCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.CPU_FREQ),
@@ -286,7 +279,7 @@ private fun RamCard(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.RAM),
@@ -358,7 +351,7 @@ private fun BatteryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.BATTERY_LEVEL),
@@ -389,7 +382,7 @@ private fun BatteryTempCard(
             }
             MetricValue(Fmt.temperature(c), color = color)
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.BATTERY_TEMP),
@@ -424,7 +417,7 @@ private fun DeviceTempCard(
             }
             MetricValue(Fmt.temperature(c), unit = "hottest zone", color = color)
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.DEVICE_TEMP),
@@ -470,7 +463,7 @@ private fun NetworkCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            // Reading seriesVersion here makes the graph recompose when new samples land.
+
             val ignoredVersion = version
             Sparkline(
                 values = vm.series.snapshot(Series.NET_DOWN),

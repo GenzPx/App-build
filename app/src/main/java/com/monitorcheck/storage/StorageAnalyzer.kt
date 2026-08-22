@@ -50,22 +50,13 @@ data class AnalysisResult(
     val unreadableDirs: Int
 )
 
-/**
- * Recursive storage analysis.
- *
- * Runs entirely on Dispatchers.IO, is cancellable, and enforces depth/entry caps so a
- * scan can never lock up a low-end device. It only reads directories the app is
- * actually allowed to read — unreadable ones are counted, not guessed at.
- *
- * NOTHING is ever deleted here. Deletion is a separate, explicitly confirmed action.
- */
 class StorageAnalyzer(private val context: Context) {
 
     companion object {
         private const val MAX_DEPTH = 12
         private const val MAX_ENTRIES = 120_000
         private const val TOP_N = 50
-        private const val DUP_MIN_SIZE = 1024L * 512 // ignore small files: hashing cost vs benefit
+        private const val DUP_MIN_SIZE = 1024L * 512
         private const val DUP_MAX_FILES = 4_000
 
         val TYPE_BUCKETS: List<TypeBucket> get() = listOf(
@@ -80,10 +71,9 @@ class StorageAnalyzer(private val context: Context) {
         )
     }
 
-    /** Directories the app can actually enumerate, given current permissions. */
     fun accessibleRoots(): List<File> {
         val roots = LinkedHashSet<File>()
-        // App-private dirs are always readable.
+
         context.filesDir.parentFile?.let { roots.add(it) }
         context.externalCacheDir?.parentFile?.let { roots.add(it) }
         if (Permissions.canReadStorage(context)) {
@@ -92,7 +82,7 @@ class StorageAnalyzer(private val context: Context) {
                 Environment.getExternalStorageDirectory()?.let { if (it.canRead()) roots.add(it) }
             }
             context.getExternalFilesDirs(null).filterNotNull().forEach { dir ->
-                // Walk up to the volume root when the volume is readable.
+
                 var f: File? = dir
                 repeat(4) { f = f?.parentFile }
                 f?.let { if (it.canRead()) roots.add(it) }
@@ -103,7 +93,6 @@ class StorageAnalyzer(private val context: Context) {
 
     fun canDeepScan(): Boolean = Permissions.canReadStorage(context)
 
-    /** Lists one directory level for the file browser. */
     suspend fun listDirectory(path: String): List<FileEntry> = withContext(Dispatchers.IO) {
         val dir = File(path)
         if (!dir.isDirectory || !dir.canRead()) return@withContext emptyList()
@@ -120,7 +109,6 @@ class StorageAnalyzer(private val context: Context) {
             ?: emptyList()
     }
 
-    /** Full recursive analysis of [rootPath]. */
     suspend fun analyze(
         rootPath: String,
         onProgress: (String, Int) -> Unit = { _, _ -> }
@@ -141,7 +129,6 @@ class StorageAnalyzer(private val context: Context) {
         val cacheCandidates = ArrayList<FileEntry>()
         val tempCandidates = ArrayList<FileEntry>()
 
-        // Iterative DFS: avoids stack overflow on deep trees and stays cancellable.
         val stack = ArrayDeque<Pair<File, Int>>()
         stack.add(root to 0)
 
@@ -202,7 +189,6 @@ class StorageAnalyzer(private val context: Context) {
             if (dirBytes > 0) folderSizes[dir.absolutePath] = dirBytes
         }
 
-        // Aggregate folder sizes upward so "largest folders" reflects recursive size.
         val recursive = HashMap<String, Long>()
         for ((path, size) in folderSizes) {
             var p: String? = path
@@ -244,10 +230,6 @@ class StorageAnalyzer(private val context: Context) {
         return sum
     }
 
-    /**
-     * Duplicate detection: group by size first, then hash only the collision
-     * candidates. Safe by construction — it reports, it never deletes.
-     */
     suspend fun findDuplicates(
         rootPath: String,
         onProgress: (Int) -> Unit = {}
@@ -291,11 +273,6 @@ class StorageAnalyzer(private val context: Context) {
         groups.sortedByDescending { it.wastedBytes }.take(100)
     }
 
-    /**
-     * Hashes the head and tail of a file plus its size. Full hashing of multi-GB
-     * media would be far too slow on a phone; head+tail+size is a strong practical
-     * signal, and we label results as candidates rather than certainties in the UI.
-     */
     private fun partialHash(file: File): String? = try {
         val md = MessageDigest.getInstance("SHA-256")
         val chunk = ByteArray(64 * 1024)
@@ -316,10 +293,6 @@ class StorageAnalyzer(private val context: Context) {
         null
     }
 
-    /**
-     * Deletes a file or empty-able directory. Only ever called after an explicit
-     * confirmation dialog in the UI. Returns bytes actually freed.
-     */
     suspend fun deletePath(path: String): Long = withContext(Dispatchers.IO) {
         val f = File(path)
         if (!f.exists()) return@withContext 0L

@@ -36,7 +36,7 @@ import com.monitorcheck.ui.theme.StatusColors
 fun ThermalScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
     val sample by vm.sample.collectAsStateWithLifecycle()
     val version by vm.seriesVersion.collectAsStateWithLifecycle()
-    // Re-read zones on every sample so temperatures stay live.
+
     val zones = remember(sample?.timestamp) { vm.thermalRepo.readZones() }
     val status = remember(sample?.timestamp) { vm.thermalRepo.thermalStatus() }
 
@@ -143,7 +143,7 @@ fun ThermalScreen(vm: MonitorViewModel, contentPadding: PaddingValues) {
                                         )
                                     }
                                     Spacer(Modifier.height(3.dp))
-                                    // Scale bar spans 0-100 °C, the practical SoC range.
+
                                     UsageBar(
                                         fraction = (z.celsius / 100.0).toFloat().coerceIn(0f, 1f),
                                         color = tempColor(z.celsius),

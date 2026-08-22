@@ -206,7 +206,6 @@ fun PermissionScreen(contentPadding: PaddingValues) {
     }
 }
 
-/** Monitored Check's own permission state, shown in Settings. */
 @Composable
 fun OwnPermissionsSection() {
     val context = LocalContext.current
